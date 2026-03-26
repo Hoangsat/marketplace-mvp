@@ -1,0 +1,94 @@
+# MarketPy Frontend — Structure Proposal
+
+Next.js 15 App Router project (TypeScript + Tailwind CSS), created in `./frontend/`.
+Connects to the existing FastAPI backend at `http://localhost:8000`.
+Auth via JWT stored in `localStorage`. Cart stored in `localStorage`.
+
+---
+
+## Proposed Folder Layout
+
+```
+frontend/
+├── .env.local                      # NEXT_PUBLIC_API_URL=http://localhost:8000
+├── next.config.ts
+├── tailwind.config.ts
+├── tsconfig.json
+├── package.json
+│
+├── app/                            # Next.js App Router pages
+│   ├── layout.tsx                  # Root layout: Navbar + global styles
+│   ├── page.tsx                    # / — Product catalog + search + filter
+│   ├── login/
+│   │   └── page.tsx                # /login
+│   ├── register/
+│   │   └── page.tsx                # /register
+│   ├── products/
+│   │   └── [id]/
+│   │       └── page.tsx            # /products/[id] — Product detail
+│   ├── cart/
+│   │   └── page.tsx                # /cart — Cart view
+│   ├── checkout/
+│   │   └── page.tsx                # /checkout — Mock checkout
+│   ├── orders/
+│   │   └── page.tsx                # /orders — Buyer order history
+│   └── seller/
+│       ├── dashboard/
+│       │   └── page.tsx            # /seller/dashboard — Product list
+│       ├── orders/
+│       │   └── page.tsx            # /seller/orders — Order items
+│       └── products/
+│           ├── new/
+│           │   └── page.tsx        # /seller/products/new — Create product
+│           └── [id]/
+│               └── edit/
+│                   └── page.tsx    # /seller/products/[id]/edit
+│
+├── components/
+│   ├── Navbar.tsx                  # Top nav: logo, search, cart icon, auth links
+│   ├── ProductCard.tsx             # Product grid card
+│   ├── ProductGrid.tsx             # Grid wrapper with loading state
+│   ├── CategoryFilter.tsx          # Category + price filter sidebar/bar
+│   └── Toast.tsx                   # Simple alert/toast component
+│
+└── lib/
+    ├── api.ts                      # Typed fetch wrapper (attaches Bearer token)
+    ├── auth.ts                     # getToken, setToken, removeToken, getUser
+    └── cart.ts                     # getCart, addToCart, removeFromCart, clearCart
+```
+
+---
+
+## Key Design Decisions
+
+| Decision | Choice | Reason |
+|---|---|---|
+| Framework | Next.js 15 App Router | User requirement |
+| Styling | Tailwind CSS only | User requirement |
+| State | `localStorage` | No Redux/Zustand, minimal |
+| HTTP | Native `fetch` only | No axios |
+| Auth | JWT in `localStorage` | Simple, no cookies |
+| Cart | `localStorage` | Server-side cart not required |
+| Payments | Mock only | Matches backend |
+
+---
+
+## `lib/api.ts` — Fetch Wrapper (preview)
+
+All API calls go through a single `apiFetch` helper that:
+1. Prepends `NEXT_PUBLIC_API_URL` to the path
+2. Attaches `Authorization: Bearer <token>` if a token exists
+3. Returns typed JSON or throws an error with the API's detail message
+
+---
+
+## Verification Plan
+
+### Automated
+- `npm run build` — TypeScript compile check, zero errors required
+
+### Manual (browser)
+1. Start backend: `uvicorn main:app --reload` in `./backend/`
+2. Start frontend: `npm run dev` in `./frontend/`
+3. **Buyer flow**: Register → browse catalog → search "Electronics" → open product → Add to Cart → go to /cart → Checkout → check /orders
+4. **Seller flow**: Register → PATCH `/users/me` to become seller → /seller/dashboard → create product with image → edit product → view /seller/orders
