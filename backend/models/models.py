@@ -16,7 +16,7 @@ class User(Base):
     id = Column(Integer, primary_key=True, index=True)
     email = Column(String, unique=True, index=True, nullable=False)
     hashed_password = Column(String, nullable=False)
-    is_seller = Column(Boolean, default=False, nullable=False)
+    is_seller = Column(Boolean, default=True, nullable=False)
 
     # Relationships (back-references for convenience)
     products = relationship("Product", back_populates="seller")

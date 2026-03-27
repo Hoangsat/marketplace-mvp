@@ -104,9 +104,6 @@ def get_seller_order_items(
     Return all order items where the product belongs to the current seller.
     Sellers only see line items for their own products — not the full order.
     """
-    if not current_user.is_seller:
-        raise HTTPException(status_code=403, detail="Only sellers can view this")
-
     return (
         db.query(OrderItem)
         .join(Product)

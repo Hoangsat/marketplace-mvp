@@ -119,9 +119,6 @@ def create_product(
     current_user: User = Depends(get_current_user),
 ):
     """Create a new product (seller only). Accepts multipart form with up to 5 images."""
-    if not current_user.is_seller:
-        raise HTTPException(status_code=403, detail="Only sellers can create products")
-
     # Validate via Pydantic (manually since we use Form fields)
     data = ProductCreate(
         title=title, description=description,
@@ -217,6 +214,4 @@ def list_my_products(
     current_user: User = Depends(get_current_user),
 ):
     """List all products belonging to the currently authenticated seller."""
-    if not current_user.is_seller:
-        raise HTTPException(status_code=403, detail="Only sellers can view this")
     return db.query(Product).filter(Product.seller_id == current_user.id).all()

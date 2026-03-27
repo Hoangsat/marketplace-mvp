@@ -13,11 +13,17 @@ export function getToken(): string | null {
 }
 
 export function setToken(token: string): void {
-  localStorage.setItem("token", token);
+  if (typeof window !== "undefined") {
+    localStorage.setItem("token", token);
+    window.dispatchEvent(new Event("authUpdated"));
+  }
 }
 
 export function removeToken(): void {
-  localStorage.removeItem("token");
+  if (typeof window !== "undefined") {
+    localStorage.removeItem("token");
+    window.dispatchEvent(new Event("authUpdated"));
+  }
 }
 
 export function isLoggedIn(): boolean {

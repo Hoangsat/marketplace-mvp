@@ -23,9 +23,11 @@ export default function Navbar() {
     };
     window.addEventListener("storage", handler);
     window.addEventListener("cartUpdated", handler);
+    window.addEventListener("authUpdated", handler);
     return () => {
       window.removeEventListener("storage", handler);
       window.removeEventListener("cartUpdated", handler);
+      window.removeEventListener("authUpdated", handler);
     };
   }, []);
 
@@ -33,6 +35,7 @@ export default function Navbar() {
     removeToken();
     localStorage.removeItem("user");
     setLoggedIn(false);
+    router.refresh();
     router.push("/login");
   }
 

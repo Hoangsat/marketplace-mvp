@@ -13,7 +13,7 @@ from pydantic import BaseModel, EmailStr, field_validator
 class UserCreate(BaseModel):
     email: EmailStr
     password: str
-    is_seller: bool = False
+    is_seller: bool = True
 
 class UserOut(BaseModel):
     id: int

@@ -12,7 +12,6 @@ export default function RegisterPage() {
   const router = useRouter();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  const [isSeller, setIsSeller] = useState(false);
   const [loading, setLoading] = useState(false);
 
   async function handleSubmit(e: React.FormEvent) {
@@ -21,7 +20,7 @@ export default function RegisterPage() {
     try {
       await apiFetch("/auth/register", {
         method: "POST",
-        body: JSON.stringify({ email, password, is_seller: isSeller }),
+        body: JSON.stringify({ email, password }),
       });
       showToast("Account created! Please log in.", "success");
       router.push("/login");
@@ -57,15 +56,6 @@ export default function RegisterPage() {
             className="w-full border border-gray-300 rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-orange-400"
           />
         </div>
-        <label className="flex items-center gap-2 text-sm cursor-pointer">
-          <input
-            type="checkbox"
-            checked={isSeller}
-            onChange={(e) => setIsSeller(e.target.checked)}
-            className="accent-orange-600"
-          />
-          Register as a seller
-        </label>
         <button
           type="submit"
           disabled={loading}

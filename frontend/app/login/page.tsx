@@ -46,6 +46,7 @@ export default function LoginPage() {
       const data: TokenResponse = await res.json();
       setToken(data.access_token);
       showToast("Logged in!", "success");
+      router.refresh();
       router.push("/");
     } catch (err: unknown) {
       showToast(err instanceof Error ? err.message : "Login failed", "error");
