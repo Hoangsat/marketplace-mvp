@@ -38,6 +38,11 @@ export interface Order {
   buyer_id: number;
   total: number;
   status: string;
+  payment_method?: string | null;
+  payment_provider?: string | null;
+  payment_reference?: string | null;
+  payment_confirmed_at?: string | null;
+  buyer_marked_paid_at?: string | null;
   created_at: string;
   items: OrderItem[];
 }

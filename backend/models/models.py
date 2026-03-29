@@ -56,8 +56,13 @@ class Order(Base):
     id = Column(Integer, primary_key=True, index=True)
     buyer_id = Column(Integer, ForeignKey("users.id"), nullable=False)
     total = Column(Float, nullable=False)
-    # "pending" or "paid_mock"
-    status = Column(String, default="pending", nullable=False)
+    # payment_pending, paid, delivered, completed, cancelled, dispute
+    status = Column(String, default="payment_pending", nullable=False)
+    payment_method = Column(String, nullable=False, default="manual_bank")
+    payment_provider = Column(String, nullable=True)
+    payment_reference = Column(String, unique=True, nullable=True)
+    payment_confirmed_at = Column(DateTime(timezone=True), nullable=True)
+    buyer_marked_paid_at = Column(DateTime(timezone=True), nullable=True)
     created_at = Column(DateTime(timezone=True), server_default=func.now())
 
     buyer = relationship("User", back_populates="orders")

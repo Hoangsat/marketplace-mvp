@@ -9,7 +9,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 from sqlalchemy.orm import Session
 
-from database import Base, SessionLocal, engine
+from database import Base, SessionLocal, engine, reset_sqlite_dev_database_if_needed
 from models.models import Category
 from routers import auth, orders, products, users
 
@@ -46,6 +46,7 @@ app.include_router(auth.router)
 app.include_router(users.router)
 app.include_router(products.router)
 app.include_router(orders.router)
+app.include_router(orders.admin_router)
 
 
 # ─── Startup: Create Tables + Seed Categories ─────────────────────────────────
@@ -56,8 +57,11 @@ SEED_CATEGORIES = ["Electronics", "Clothing", "Home", "Books", "Beauty", "Sports
 @app.on_event("startup")
 def startup():
     """Create all DB tables and seed default categories on first run."""
-    # Create tables if they don't exist yet
+    reset_sqlite_dev_database_if_needed()
     Base.metadata.create_all(bind=engine)
+
+    if os.getenv("ENV") != "production":
+        print("New database recreated with latest schema", flush=True)
 
     db: Session = SessionLocal()
     try:
@@ -68,6 +72,8 @@ def startup():
         db.commit()
     finally:
         db.close()
+
+    print("Database initialized successfully", flush=True)
 
 
 # ─── Health Check ─────────────────────────────────────────────────────────────

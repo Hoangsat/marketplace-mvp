@@ -33,7 +33,7 @@ export default function CheckoutPage() {
 
     setLoading(true);
     try {
-      await apiFetch<Order>("/orders/checkout", {
+      const order = await apiFetch<Order>("/orders/checkout", {
         method: "POST",
         body: JSON.stringify({
           items: cart.map((c) => ({
@@ -44,8 +44,8 @@ export default function CheckoutPage() {
       });
       clearCart();
       window.dispatchEvent(new Event("cartUpdated"));
-      showToast("Order placed! 🎉", "success");
-      router.push("/orders");
+      showToast("Order placed! Please complete payment. 💳", "success");
+      router.push(`/orders/${order.id}/payment`);
     } catch (err: unknown) {
       showToast(err instanceof Error ? err.message : "Checkout failed", "error");
     } finally {
@@ -81,8 +81,8 @@ export default function CheckoutPage() {
         </div>
       </div>
 
-      <div className="bg-amber-50 border border-amber-200 rounded-lg p-4 text-sm text-amber-800 mb-6">
-        🔒 This is a <strong>mock checkout</strong> — no real payment will be charged.
+      <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 text-sm text-blue-800 mb-6">
+        ℹ️ You will be redirected to the manual bank transfer payment page.
       </div>
 
       <button
@@ -90,7 +90,7 @@ export default function CheckoutPage() {
         disabled={loading}
         className="w-full bg-orange-600 text-white py-3 rounded font-semibold hover:bg-orange-700 disabled:opacity-50"
       >
-        {loading ? "Placing order..." : "Place Order (Mock)"}
+        {loading ? "Processing..." : "Continue to Payment"}
       </button>
     </div>
   );

@@ -39,10 +39,31 @@ export default function OrdersPage() {
                     {new Date(order.created_at).toLocaleDateString()}
                   </p>
                 </div>
-                <div className="text-right">
-                  <span className="inline-block bg-green-100 text-green-700 text-xs px-2 py-0.5 rounded-full font-medium">
-                    {order.status}
+                <div className="text-right flex flex-col items-end">
+                  <span
+                    className={`inline-block text-xs px-2 py-0.5 rounded-full font-medium ${
+                      order.status === "paid" || order.status === "delivered"
+                        ? "bg-green-100 text-green-700"
+                        : order.status === "payment_pending"
+                        ? "bg-yellow-100 text-yellow-700"
+                        : order.status === "cancelled"
+                        ? "bg-gray-100 text-gray-700"
+                        : "bg-blue-100 text-blue-700"
+                    }`}
+                  >
+                    {order.status.replace("_", " ")}
                   </span>
+                  {order.status === "payment_pending" && !order.buyer_marked_paid_at && (
+                    <button
+                      onClick={() => router.push(`/orders/${order.id}/payment`)}
+                      className="mt-2 text-xs bg-orange-600 text-white px-3 py-1 rounded hover:bg-orange-700 transition"
+                    >
+                      Complete Payment
+                    </button>
+                  )}
+                  {order.status === "payment_pending" && order.buyer_marked_paid_at && (
+                    <p className="mt-2 text-xs text-orange-600 font-medium">Payment evaluating...</p>
+                  )}
                   <p className="text-orange-600 font-semibold mt-1">${order.total.toFixed(2)}</p>
                 </div>
               </div>

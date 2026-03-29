@@ -114,6 +114,11 @@ class OrderOut(BaseModel):
     buyer_id: int
     total: float
     status: str
+    payment_method: Optional[str] = None
+    payment_provider: Optional[str] = None
+    payment_reference: Optional[str] = None
+    payment_confirmed_at: Optional[datetime] = None
+    buyer_marked_paid_at: Optional[datetime] = None
     created_at: datetime
     items: List[OrderItemOut]
 
