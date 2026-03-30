@@ -1,12 +1,38 @@
 // lib/api.ts
 // Typed fetch wrapper that prepends API base URL and attaches JWT automatically.
 
+import { getToken } from "@/lib/auth";
+
 export const API_BASE_URL =
   process.env.NEXT_PUBLIC_API_URL ?? "http://127.0.0.1:8000";
 
-function getToken(): string | null {
-  if (typeof window === "undefined") return null;
-  return localStorage.getItem("token");
+function normalizePath(path: string): string {
+  const pathWithoutQuery = path.split("?")[0] ?? path;
+  const trimmedPath = pathWithoutQuery.replace(/\/+$/, "");
+  return trimmedPath || "/";
+}
+
+function shouldAttachAuth(path: string, method?: string): boolean {
+  const normalizedPath = normalizePath(path);
+  const normalizedMethod = (method ?? "GET").toUpperCase();
+
+  if (normalizedMethod === "GET") {
+    if (
+      normalizedPath === "/categories" ||
+      normalizedPath === "/games" ||
+      normalizedPath === "/offer-types" ||
+      normalizedPath === "/products" ||
+      /^\/products\/\d+$/.test(normalizedPath)
+    ) {
+      return false;
+    }
+  }
+
+  if (normalizedMethod === "POST" && normalizedPath === "/auth/register") {
+    return false;
+  }
+
+  return true;
 }
 
 export async function apiFetch<T>(
@@ -19,7 +45,7 @@ export async function apiFetch<T>(
     ...(options.headers as Record<string, string>),
   };
 
-  if (token) {
+  if (token && shouldAttachAuth(path, options.method)) {
     headers["Authorization"] = `Bearer ${token}`;
   }
 
