@@ -2,7 +2,9 @@ import os
 from datetime import timedelta
 from pathlib import Path
 
+import dj_database_url
 from dotenv import load_dotenv
+from django.core.exceptions import ImproperlyConfigured
 
 
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -69,12 +71,19 @@ TEMPLATES = [
 WSGI_APPLICATION = "config.wsgi.application"
 ASGI_APPLICATION = "config.asgi.application"
 
+DATABASE_URL = os.getenv("DATABASE_URL")
+if not DATABASE_URL:
+    raise ImproperlyConfigured("DATABASE_URL environment variable is required")
+
 DATABASES = {
-    "default": {
-        "ENGINE": "django.db.backends.sqlite3",
-        "NAME": BASE_DIR / os.getenv("DJANGO_SQLITE_NAME", "db.sqlite3"),
-    }
+    "default": dj_database_url.parse(
+        DATABASE_URL,
+        conn_max_age=600,
+        ssl_require=not DEBUG,
+    )
 }
+if not DEBUG and DATABASES["default"]["ENGINE"] != "django.db.backends.postgresql":
+    raise ImproperlyConfigured("Production DATABASE_URL must use PostgreSQL")
 
 AUTH_PASSWORD_VALIDATORS = []
 
