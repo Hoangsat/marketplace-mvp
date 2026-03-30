@@ -6,6 +6,20 @@ export interface Category {
   name: string;
 }
 
+export interface Game {
+  id: number;
+  name: string;
+  slug: string;
+  display_name_vi: string;
+}
+
+export interface OfferType {
+  id: number;
+  name: string;
+  slug: string;
+  display_name_vi: string;
+}
+
 export interface Product {
   id: number;
   title: string;
