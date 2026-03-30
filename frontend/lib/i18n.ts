@@ -121,6 +121,14 @@ export interface TranslationMessages {
   productNotFound: string;
   back: string;
   categoryLabel: string;
+  selectedCategoryLabel: string;
+  selectedGameLabel: string;
+  selectedOfferTypeLabel: string;
+  catalogContextPrefilled: string;
+  categoryStillRequired: string;
+  gamesCategoryName: string;
+  categoryAutoAssigned: string;
+  categoryFallbackManual: string;
   stockLabel: string;
   quantity: string;
   addToCart: string;
@@ -138,6 +146,7 @@ export interface TranslationMessages {
   creating: string;
   saving: string;
   saveChanges: string;
+  sellInThisCategory: string;
   cancel: string;
   productCreated: string;
   productUpdated: string;
@@ -281,6 +290,14 @@ export const translations: Record<Language, TranslationMessages> = {
     productNotFound: "Không tìm thấy sản phẩm.",
     back: "Quay lại",
     categoryLabel: "Danh mục",
+    selectedCategoryLabel: "Danh mục đã chọn",
+    selectedGameLabel: "Trò chơi đã chọn",
+    selectedOfferTypeLabel: "Loại dịch vụ đã chọn",
+    catalogContextPrefilled: "Ngữ cảnh danh mục đã được điền sẵn từ trang hiện tại.",
+    categoryStillRequired: "Bạn vẫn cần chọn danh mục hệ thống hiện tại trước khi đăng bán.",
+    gamesCategoryName: "Trò chơi",
+    categoryAutoAssigned: "Danh mục Trò chơi đã được gán tự động cho tin đăng này.",
+    categoryFallbackManual: "Không thể tự động gán danh mục Trò chơi cho lựa chọn này, vui lòng chọn danh mục thủ công.",
     stockLabel: "Tồn kho",
     quantity: "Số lượng",
     addToCart: "Thêm vào giỏ",
@@ -299,6 +316,7 @@ export const translations: Record<Language, TranslationMessages> = {
     creating: "Đang tạo...",
     saving: "Đang lưu...",
     saveChanges: "Lưu thay đổi",
+    sellInThisCategory: "Bán trong danh mục này",
     cancel: "Hủy",
     productCreated: "Tạo sản phẩm thành công!",
     productUpdated: "Cập nhật sản phẩm thành công!",
@@ -439,6 +457,14 @@ export const translations: Record<Language, TranslationMessages> = {
     productNotFound: "Product not found.",
     back: "Back",
     categoryLabel: "Category",
+    selectedCategoryLabel: "Selected Category",
+    selectedGameLabel: "Selected Game",
+    selectedOfferTypeLabel: "Selected Offer Type",
+    catalogContextPrefilled: "Catalog context was prefilled from this page.",
+    categoryStillRequired: "You still need to choose the current legacy category before listing.",
+    gamesCategoryName: "Games",
+    categoryAutoAssigned: "The Games category was assigned automatically for this listing.",
+    categoryFallbackManual: "We couldn't auto-assign the Games category for this selection, so please choose one manually.",
     stockLabel: "Stock",
     quantity: "Qty",
     addToCart: "Add to Cart",
@@ -457,6 +483,7 @@ export const translations: Record<Language, TranslationMessages> = {
     creating: "Creating...",
     saving: "Saving...",
     saveChanges: "Save Changes",
+    sellInThisCategory: "Sell in this category",
     cancel: "Cancel",
     productCreated: "Product created!",
     productUpdated: "Product updated!",

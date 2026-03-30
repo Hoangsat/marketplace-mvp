@@ -51,7 +51,9 @@ class ProductCreateSerializer(serializers.Serializer):
     description = serializers.CharField()
     price = serializers.DecimalField(max_digits=12, decimal_places=2)
     stock = serializers.IntegerField()
-    category_id = serializers.IntegerField()
+    category_id = serializers.IntegerField(required=False)
+    game_id = serializers.IntegerField(required=False)
+    offer_type_id = serializers.IntegerField(required=False)
 
     def validate_price(self, value):
         if value <= 0:

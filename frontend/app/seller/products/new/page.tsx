@@ -3,18 +3,37 @@
 // app/seller/products/new/page.tsx - Create a new product
 
 import { useEffect, useState } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { useLanguage } from "@/components/LanguageProvider";
 import { showToast } from "@/components/Toast";
 import { apiFetch } from "@/lib/api";
 import { getToken } from "@/lib/auth";
-import { Category } from "@/lib/types";
+import { Category, Game, OfferType } from "@/lib/types";
+import { Language } from "@/lib/i18n";
+
+function getGameName(game: Game, language: Language) {
+  if (language === "vi") {
+    return game.display_name_vi || game.name;
+  }
+  return game.name;
+}
+
+function getOfferTypeName(offerType: OfferType, language: Language) {
+  if (language === "vi") {
+    return offerType.display_name_vi || offerType.name;
+  }
+  return offerType.name;
+}
 
 export default function NewProductPage() {
   const router = useRouter();
-  const { messages } = useLanguage();
+  const searchParams = useSearchParams();
+  const { language, messages } = useLanguage();
   const [categories, setCategories] = useState<Category[]>([]);
   const [loading, setLoading] = useState(false);
+  const [selectedGame, setSelectedGame] = useState<Game | null>(null);
+  const [selectedOfferType, setSelectedOfferType] = useState<OfferType | null>(null);
+  const [selectedCategory, setSelectedCategory] = useState<Category | null>(null);
 
   const [form, setForm] = useState({
     title: "",
@@ -25,13 +44,52 @@ export default function NewProductPage() {
   });
   const [images, setImages] = useState<FileList | null>(null);
 
+  const gameSlug = searchParams.get("game");
+  const offerTypeSlug = searchParams.get("offerType");
+  const hasCatalogQuery = Boolean(gameSlug || offerTypeSlug);
+
   useEffect(() => {
     if (!getToken()) {
       router.push("/login");
       return;
     }
-    apiFetch<Category[]>("/categories").then(setCategories).catch(() => {});
-  }, [router]);
+    Promise.all([
+      apiFetch<Category[]>("/categories"),
+      apiFetch<Game[]>("/games"),
+      apiFetch<OfferType[]>("/offer-types"),
+    ])
+      .then(([categoriesData, gamesData, offerTypesData]) => {
+        const resolvedGame =
+          gamesData.find((game) => game.slug === gameSlug) ?? null;
+        const resolvedOfferType =
+          offerTypesData.find((offerType) => offerType.slug === offerTypeSlug) ?? null;
+        const resolvedCategory =
+          resolvedGame && resolvedOfferType
+            ? categoriesData.find(
+                (category) => category.name.toLowerCase() === "games"
+              ) ?? null
+            : null;
+
+        setCategories(categoriesData);
+        setSelectedGame(resolvedGame);
+        setSelectedOfferType(resolvedOfferType);
+        setSelectedCategory(resolvedCategory);
+        setForm((currentForm) => ({
+          ...currentForm,
+          category_id: resolvedCategory
+            ? String(resolvedCategory.id)
+            : resolvedGame && resolvedOfferType
+              ? ""
+              : currentForm.category_id,
+        }));
+      })
+      .catch(() => {
+        setCategories([]);
+        setSelectedGame(null);
+        setSelectedOfferType(null);
+        setSelectedCategory(null);
+      });
+  }, [gameSlug, offerTypeSlug, router]);
 
   function set(field: string, value: string) {
     setForm((currentForm) => ({ ...currentForm, [field]: value }));
@@ -46,7 +104,15 @@ export default function NewProductPage() {
       fd.append("description", form.description);
       fd.append("price", form.price);
       fd.append("stock", form.stock);
-      fd.append("category_id", form.category_id);
+      if (form.category_id) {
+        fd.append("category_id", form.category_id);
+      }
+      if (selectedGame) {
+        fd.append("game_id", String(selectedGame.id));
+      }
+      if (selectedOfferType) {
+        fd.append("offer_type_id", String(selectedOfferType.id));
+      }
       if (images) {
         Array.from(images).forEach((file) => fd.append("images", file));
       }
@@ -64,9 +130,46 @@ export default function NewProductPage() {
     }
   }
 
+  const hasResolvedCatalogCategory = Boolean(
+    selectedGame && selectedOfferType && selectedCategory
+  );
+  const showCatalogContext = Boolean(
+    selectedGame || selectedOfferType || hasResolvedCatalogCategory || hasCatalogQuery
+  );
+  const showManualCategoryFallback = hasCatalogQuery && !hasResolvedCatalogCategory;
+
   return (
     <div className="max-w-lg mx-auto">
       <h1 className="text-2xl font-bold mb-6">{messages.createProductTitle}</h1>
+      {showCatalogContext && (
+        <div className="mb-6 rounded-lg border border-orange-200 bg-orange-50 p-4 text-sm">
+          <p className="font-medium text-gray-900">
+            {messages.catalogContextPrefilled}
+          </p>
+          {hasResolvedCatalogCategory && (
+            <p className="mt-2 text-gray-700">
+              {messages.selectedCategoryLabel}: {messages.gamesCategoryName}
+            </p>
+          )}
+          {selectedGame && (
+            <p className="mt-2 text-gray-700">
+              {messages.selectedGameLabel}:{" "}
+              {getGameName(selectedGame, language)}
+            </p>
+          )}
+          {selectedOfferType && (
+            <p className="mt-1 text-gray-700">
+              {messages.selectedOfferTypeLabel}:{" "}
+              {getOfferTypeName(selectedOfferType, language)}
+            </p>
+          )}
+          {hasResolvedCatalogCategory ? (
+            <p className="mt-2 text-gray-600">{messages.categoryAutoAssigned}</p>
+          ) : showManualCategoryFallback ? (
+            <p className="mt-2 text-gray-600">{messages.categoryFallbackManual}</p>
+          ) : null}
+        </div>
+      )}
       <form onSubmit={handleSubmit} className="space-y-4">
         <Field label={messages.titleLabel}>
           <input
@@ -108,21 +211,23 @@ export default function NewProductPage() {
             />
           </Field>
         </div>
-        <Field label={messages.categoryLabel}>
-          <select
-            required
-            value={form.category_id}
-            onChange={(event) => set("category_id", event.target.value)}
-            className={input}
-          >
-            <option value="">{messages.selectCategory}</option>
-            {categories.map((category) => (
-              <option key={category.id} value={category.id}>
-                {category.name}
-              </option>
-            ))}
-          </select>
-        </Field>
+        {!hasResolvedCatalogCategory && (
+          <Field label={messages.categoryLabel}>
+            <select
+              required
+              value={form.category_id}
+              onChange={(event) => set("category_id", event.target.value)}
+              className={input}
+            >
+              <option value="">{messages.selectCategory}</option>
+              {categories.map((category) => (
+                <option key={category.id} value={category.id}>
+                  {category.name}
+                </option>
+              ))}
+            </select>
+          </Field>
+        )}
         <Field label={messages.imagesLabel}>
           <input
             type="file"

@@ -23,6 +23,7 @@ from .serializers import (
 ALLOWED_EXTENSIONS = {"jpg", "jpeg", "png"}
 MAX_FILE_SIZE_BYTES = 5 * 1024 * 1024
 MAX_IMAGES_PER_PRODUCT = 5
+GAMES_CATEGORY_NAME = "Games"
 
 
 def _detail_response(message: str, status_code: int) -> Response:
@@ -67,6 +68,32 @@ def _save_images(files) -> list[str]:
         saved_paths.append(f"{settings.MEDIA_URL}{unique_name}")
 
     return saved_paths
+
+
+def _resolve_active_game(game_id):
+    if game_id is None:
+        return None
+    return Game.objects.filter(id=game_id, is_active=True).first()
+
+
+def _resolve_active_offer_type(offer_type_id):
+    if offer_type_id is None:
+        return None
+    return OfferType.objects.filter(id=offer_type_id, is_active=True).first()
+
+
+def _resolve_create_category(validated_data, game, offer_type):
+    if game and offer_type:
+        games_category = Category.objects.filter(
+            name__iexact=GAMES_CATEGORY_NAME
+        ).first()
+        if games_category:
+            return games_category
+
+    category_id = validated_data.get("category_id")
+    if category_id is None:
+        return None
+    return Category.objects.filter(id=category_id).first()
 
 
 class CategoryListView(APIView):
@@ -151,9 +178,27 @@ class ProductCollectionView(APIView):
                 _first_error(serializer.errors), status.HTTP_400_BAD_REQUEST
             )
 
-        category = Category.objects.filter(
-            id=serializer.validated_data["category_id"]
-        ).first()
+        game = _resolve_active_game(serializer.validated_data.get("game_id"))
+        if "game_id" in serializer.validated_data and not game:
+            return _detail_response("Game not found", status.HTTP_404_NOT_FOUND)
+
+        offer_type = _resolve_active_offer_type(
+            serializer.validated_data.get("offer_type_id")
+        )
+        if "offer_type_id" in serializer.validated_data and not offer_type:
+            return _detail_response(
+                "Offer type not found", status.HTTP_404_NOT_FOUND
+            )
+
+        category = _resolve_create_category(
+            serializer.validated_data,
+            game,
+            offer_type,
+        )
+        if not category and "category_id" not in serializer.validated_data:
+            return _detail_response(
+                "Category is required", status.HTTP_400_BAD_REQUEST
+            )
         if not category:
             return _detail_response("Category not found", status.HTTP_404_NOT_FOUND)
 
@@ -169,6 +214,8 @@ class ProductCollectionView(APIView):
             price=serializer.validated_data["price"],
             stock=serializer.validated_data["stock"],
             category=category,
+            game=game,
+            offer_type=offer_type,
             seller=request.user,
             images=image_paths,
         )

@@ -55,15 +55,17 @@ export default function CatalogGamePage() {
 
   return (
     <div className="space-y-6">
-      <div className="space-y-2">
-        <Link href="/catalog" className="text-sm text-orange-600 hover:underline">
+      <div className="rounded-2xl border border-gray-200 bg-white p-6 shadow-sm">
+        <Link href="/catalog" className="text-sm font-medium text-orange-600 hover:underline">
           {messages.backToCatalog}
         </Link>
-        <div>
-          <h1 className="text-2xl font-bold">
+        <div className="mt-3">
+          <h1 className="text-3xl font-bold tracking-tight text-gray-900">
             {game ? getGameName(game, language) : messages.catalog}
           </h1>
-          <p className="text-sm text-gray-500 mt-1">{messages.chooseOfferType}</p>
+          <p className="mt-2 max-w-2xl text-sm text-gray-600">
+            {messages.chooseOfferType}
+          </p>
         </div>
       </div>
 
@@ -81,12 +83,12 @@ export default function CatalogGamePage() {
             <Link
               key={offerType.id}
               href={`/catalog/${game.slug}/${offerType.slug}`}
-              className="block rounded-lg border border-gray-200 bg-white p-5 hover:shadow-md transition-shadow"
+              className="group block rounded-2xl border border-gray-200 bg-white p-5 shadow-sm transition-all hover:-translate-y-0.5 hover:border-orange-200 hover:shadow-md"
             >
-              <p className="font-semibold text-gray-900">
+              <p className="text-lg font-semibold text-gray-900 transition-colors group-hover:text-orange-700">
                 {getOfferTypeName(offerType, language)}
               </p>
-              <p className="mt-1 text-sm text-gray-500">{offerType.name}</p>
+              <p className="mt-2 text-sm text-gray-500">{offerType.name}</p>
             </Link>
           ))}
         </div>

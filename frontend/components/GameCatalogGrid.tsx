@@ -35,9 +35,13 @@ export default function GameCatalogGrid() {
 
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-2xl font-bold">{messages.catalog}</h1>
-        <p className="mt-1 text-sm text-gray-500">{messages.chooseGame}</p>
+      <div className="rounded-2xl border border-orange-100 bg-gradient-to-br from-white to-orange-50 p-6 shadow-sm">
+        <h1 className="text-3xl font-bold tracking-tight text-gray-900">
+          {messages.catalog}
+        </h1>
+        <p className="mt-2 max-w-2xl text-sm text-gray-600">
+          {messages.chooseGame}
+        </p>
       </div>
 
       {loading ? (
@@ -52,12 +56,12 @@ export default function GameCatalogGrid() {
             <Link
               key={game.id}
               href={`/catalog/${game.slug}`}
-              className="block rounded-lg border border-gray-200 bg-white p-5 transition-shadow hover:shadow-md"
+              className="group block rounded-2xl border border-gray-200 bg-white p-5 shadow-sm transition-all hover:-translate-y-0.5 hover:border-orange-200 hover:shadow-md"
             >
-              <p className="font-semibold text-gray-900">
+              <p className="text-lg font-semibold text-gray-900 transition-colors group-hover:text-orange-700">
                 {getDisplayName(game, language)}
               </p>
-              <p className="mt-1 text-sm text-gray-500">{game.name}</p>
+              <p className="mt-2 text-sm text-gray-500">{game.name}</p>
             </Link>
           ))}
         </div>
