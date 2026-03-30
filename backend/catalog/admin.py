@@ -1,6 +1,6 @@
 from django.contrib import admin
 
-from .models import Category, Product
+from .models import Category, Game, OfferType, Product
 
 
 @admin.register(Category)
@@ -21,3 +21,19 @@ class ProductAdmin(admin.ModelAdmin):
     @admin.display(ordering="title", description="Name")
     def name(self, obj):
         return obj.title
+
+
+@admin.register(Game)
+class GameAdmin(admin.ModelAdmin):
+    list_display = ("id", "name", "slug", "is_active", "created_at")
+    search_fields = ("name", "slug", "display_name_vi")
+    list_filter = ("is_active",)
+    ordering = ("name",)
+
+
+@admin.register(OfferType)
+class OfferTypeAdmin(admin.ModelAdmin):
+    list_display = ("id", "name", "slug", "is_active", "created_at")
+    search_fields = ("name", "slug", "display_name_vi")
+    list_filter = ("is_active",)
+    ordering = ("name",)

@@ -1,3 +1,4 @@
+from decimal import Decimal, InvalidOperation
 import os
 import uuid
 
@@ -8,9 +9,11 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 
 from common.permissions import IsAuthenticatedSeller
-from .models import Category, Product
+from .models import Category, Game, OfferType, Product
 from .serializers import (
     CategorySerializer,
+    GameSerializer,
+    OfferTypeSerializer,
     ProductCreateSerializer,
     ProductSerializer,
     ProductUpdateSerializer,
@@ -74,6 +77,22 @@ class CategoryListView(APIView):
         return Response(CategorySerializer(categories, many=True).data)
 
 
+class GameListView(APIView):
+    permission_classes = [permissions.AllowAny]
+
+    def get(self, request):
+        games = Game.objects.filter(is_active=True).order_by("id")
+        return Response(GameSerializer(games, many=True).data)
+
+
+class OfferTypeListView(APIView):
+    permission_classes = [permissions.AllowAny]
+
+    def get(self, request):
+        offer_types = OfferType.objects.filter(is_active=True).order_by("id")
+        return Response(OfferTypeSerializer(offer_types, many=True).data)
+
+
 class ProductCollectionView(APIView):
     permission_classes = [permissions.AllowAny]
     parser_classes = [JSONParser, FormParser, MultiPartParser]
@@ -88,13 +107,36 @@ class ProductCollectionView(APIView):
 
         search = request.query_params.get("search")
         category_id = request.query_params.get("category_id")
+        game_slug = request.query_params.get("game")
+        offer_type_slug = request.query_params.get("offer_type")
         min_price = request.query_params.get("min_price")
         max_price = request.query_params.get("max_price")
+
+        try:
+            if category_id:
+                category_id = int(category_id)
+            if min_price not in (None, ""):
+                min_price = Decimal(min_price)
+            else:
+                min_price = None
+            if max_price not in (None, ""):
+                max_price = Decimal(max_price)
+            else:
+                max_price = None
+        except (TypeError, ValueError, InvalidOperation):
+            return _detail_response("Invalid filter value", status.HTTP_400_BAD_REQUEST)
 
         if search:
             products = products.filter(title__icontains=search)
         if category_id:
             products = products.filter(category_id=category_id)
+        if game_slug:
+            products = products.filter(game__slug=game_slug, game__is_active=True)
+        if offer_type_slug:
+            products = products.filter(
+                offer_type__slug=offer_type_slug,
+                offer_type__is_active=True,
+            )
         if min_price is not None:
             products = products.filter(price__gte=min_price)
         if max_price is not None:

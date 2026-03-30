@@ -1,6 +1,6 @@
 from rest_framework import serializers
 
-from .models import Category, Product
+from .models import Category, Game, OfferType, Product
 
 
 class CategorySerializer(serializers.ModelSerializer):
@@ -9,7 +9,20 @@ class CategorySerializer(serializers.ModelSerializer):
         fields = ("id", "name")
 
 
+class GameSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Game
+        fields = ("id", "name", "slug", "display_name_vi")
+
+
+class OfferTypeSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = OfferType
+        fields = ("id", "name", "slug", "display_name_vi")
+
+
 class ProductSerializer(serializers.ModelSerializer):
+    price = serializers.FloatField(read_only=True)
     images = serializers.ListField(
         child=serializers.CharField(),
         read_only=True,
@@ -34,9 +47,9 @@ class ProductSerializer(serializers.ModelSerializer):
 
 
 class ProductCreateSerializer(serializers.Serializer):
-    title = serializers.CharField()
+    title = serializers.CharField(max_length=255)
     description = serializers.CharField()
-    price = serializers.FloatField()
+    price = serializers.DecimalField(max_digits=12, decimal_places=2)
     stock = serializers.IntegerField()
     category_id = serializers.IntegerField()
 
@@ -52,9 +65,9 @@ class ProductCreateSerializer(serializers.Serializer):
 
 
 class ProductUpdateSerializer(serializers.Serializer):
-    title = serializers.CharField(required=False)
+    title = serializers.CharField(required=False, max_length=255)
     description = serializers.CharField(required=False)
-    price = serializers.FloatField(required=False)
+    price = serializers.DecimalField(max_digits=12, decimal_places=2, required=False)
     stock = serializers.IntegerField(required=False)
     category_id = serializers.IntegerField(required=False)
 

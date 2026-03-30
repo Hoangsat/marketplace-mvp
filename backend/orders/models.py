@@ -19,7 +19,7 @@ class Order(models.Model):
         on_delete=models.CASCADE,
         related_name="orders",
     )
-    total = models.FloatField()
+    total = models.DecimalField(max_digits=12, decimal_places=2)
     status = models.CharField(
         max_length=32,
         choices=Status.choices,
@@ -45,10 +45,20 @@ class OrderItem(models.Model):
     order = models.ForeignKey(Order, on_delete=models.CASCADE, related_name="items")
     product = models.ForeignKey(Product, on_delete=models.CASCADE, related_name="order_items")
     quantity = models.IntegerField()
-    price_at_purchase = models.FloatField()
+    price_at_purchase = models.DecimalField(max_digits=12, decimal_places=2)
 
     class Meta:
         db_table = "order_items"
+        constraints = [
+            models.CheckConstraint(
+                condition=models.Q(quantity__gt=0),
+                name="orderitem_quantity_gt_0",
+            ),
+            models.CheckConstraint(
+                condition=models.Q(price_at_purchase__gte=0),
+                name="orderitem_price_at_purchase_gte_0",
+            ),
+        ]
 
     def __str__(self) -> str:
         return f"OrderItem #{self.pk}"

@@ -8,6 +8,7 @@ from .models import Order, OrderItem
 class OrderItemSerializer(serializers.ModelSerializer):
     order_id = serializers.IntegerField(read_only=True)
     product_id = serializers.IntegerField(read_only=True)
+    price_at_purchase = serializers.FloatField(read_only=True)
     product = ProductSerializer(read_only=True)
 
     class Meta:
@@ -24,6 +25,7 @@ class OrderItemSerializer(serializers.ModelSerializer):
 
 class OrderSerializer(serializers.ModelSerializer):
     buyer_id = serializers.IntegerField(read_only=True)
+    total = serializers.FloatField(read_only=True)
     payment_method = serializers.CharField(allow_null=True, required=False)
     payment_provider = serializers.CharField(allow_null=True, required=False)
     payment_reference = serializers.CharField(allow_null=True, required=False)

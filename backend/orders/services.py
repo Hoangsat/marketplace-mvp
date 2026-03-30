@@ -27,12 +27,23 @@ def create_checkout_order(*, buyer, items):
     if not items:
         raise OrderFlowError("Cart is empty", status.HTTP_400_BAD_REQUEST)
 
-    products_to_buy = []
+    requested_quantities = {}
     for item in items:
-        product = Product.objects.filter(id=item["product_id"]).first()
+        product_id = item["product_id"]
+        requested_quantities[product_id] = (
+            requested_quantities.get(product_id, 0) + item["quantity"]
+        )
+
+    products = {
+        product.id: product
+        for product in Product.objects.filter(id__in=requested_quantities.keys())
+    }
+    products_to_buy = []
+    for product_id, quantity in requested_quantities.items():
+        product = products.get(product_id)
         if not product:
             raise OrderFlowError(
-                f"Product {item['product_id']} not found",
+                f"Product {product_id} not found",
                 status.HTTP_404_NOT_FOUND,
             )
         if product.stock == 0:
@@ -40,20 +51,23 @@ def create_checkout_order(*, buyer, items):
                 f"'{product.title}' is out of stock",
                 status.HTTP_400_BAD_REQUEST,
             )
-        if product.stock < item["quantity"]:
+        if product.stock < quantity:
             raise OrderFlowError(
                 f"Insufficient stock for '{product.title}'. Available: {product.stock}",
                 status.HTTP_400_BAD_REQUEST,
             )
-        products_to_buy.append((product, item["quantity"]))
+        products_to_buy.append((product, quantity))
 
-    total = sum(product.price * qty for product, qty in products_to_buy)
+    total = sum(
+        (product.price * qty for product, qty in products_to_buy),
+        Decimal("0.00"),
+    )
     payment_ref = f"ORD-{uuid.uuid4().hex[:8].upper()}"
 
     with transaction.atomic():
         order = Order.objects.create(
             buyer=buyer,
-            total=round(total, 2),
+            total=total.quantize(Decimal("0.01")),
             status=Order.Status.PENDING,
             payment_method="manual_bank",
             payment_provider=None,
@@ -112,21 +126,29 @@ def confirm_order_payment(*, order_id, current_user=None):
                 f"Cannot confirm payment for order in status {order.status}",
                 status.HTTP_400_BAD_REQUEST,
             )
+        locked_products = {
+            product.id: product
+            for product in Product.objects.select_for_update().filter(
+                id__in={item.product_id for item in order.items.all()}
+            )
+        }
         for item in order.items.all():
-            if not item.product:
+            product = locked_products.get(item.product_id)
+            if not product:
                 raise OrderFlowError(
                     "A product in this order no longer exists.",
                     status.HTTP_400_BAD_REQUEST,
                 )
-            if item.product.stock < item.quantity:
+            if product.stock < item.quantity:
                 raise OrderFlowError(
-                    f"Insufficient stock for '{item.product.title}' to fulfill this order now.",
+                    f"Insufficient stock for '{product.title}' to fulfill this order now.",
                     status.HTTP_400_BAD_REQUEST,
                 )
 
         for item in order.items.all():
-            item.product.stock -= item.quantity
-            item.product.save(update_fields=["stock"])
+            product = locked_products[item.product_id]
+            product.stock -= item.quantity
+            product.save(update_fields=["stock"])
 
         seller_amounts = _get_seller_amounts(order)
         for seller_id, seller_data in seller_amounts.items():
