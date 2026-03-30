@@ -46,45 +46,50 @@ export default function HomePage() {
     return () => clearTimeout(delay);
   }, [fetchProducts]);
 
+  const filterControlClasses =
+    "h-11 rounded-lg border border-gray-300 bg-white px-3 text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-orange-400";
+
   return (
     <div>
-      <h1 className="text-2xl font-bold mb-4">{messages.browseProducts}</h1>
+      <h1 className="text-2xl font-bold mb-4">{messages.catalog}</h1>
 
       {/* Filters */}
-      <div className="flex flex-wrap gap-3 mb-6">
-        <input
-          type="text"
-          placeholder={messages.searchProducts}
-          value={search}
-          onChange={(e) => setSearch(e.target.value)}
-          className="border border-gray-300 rounded px-3 py-2 text-sm flex-1 min-w-48 focus:outline-none focus:ring-2 focus:ring-orange-400"
-        />
-        <select
-          value={categoryId}
-          onChange={(e) => setCategoryId(e.target.value)}
-          className="border border-gray-300 rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-orange-400"
-        >
-          <option value="">{messages.allCategories}</option>
-          {categories.map((c) => (
-            <option key={c.id} value={c.id}>
-              {c.name}
-            </option>
-          ))}
-        </select>
-        <input
-          type="number"
-          placeholder={messages.minPrice}
-          value={minPrice}
-          onChange={(e) => setMinPrice(e.target.value)}
-          className="border border-gray-300 rounded px-3 py-2 text-sm w-24 focus:outline-none focus:ring-2 focus:ring-orange-400"
-        />
-        <input
-          type="number"
-          placeholder={messages.maxPrice}
-          value={maxPrice}
-          onChange={(e) => setMaxPrice(e.target.value)}
-          className="border border-gray-300 rounded px-3 py-2 text-sm w-24 focus:outline-none focus:ring-2 focus:ring-orange-400"
-        />
+      <div className="mb-6 rounded-xl border border-gray-200 bg-white p-3 shadow-sm">
+        <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap">
+          <input
+            type="text"
+            placeholder={messages.searchProducts}
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            className={`${filterControlClasses} w-full sm:min-w-[16rem] sm:flex-1`}
+          />
+          <select
+            value={categoryId}
+            onChange={(e) => setCategoryId(e.target.value)}
+            className={`${filterControlClasses} w-full appearance-none sm:w-52`}
+          >
+            <option value="">{messages.allCategories}</option>
+            {categories.map((c) => (
+              <option key={c.id} value={c.id}>
+                {c.name}
+              </option>
+            ))}
+          </select>
+          <input
+            type="number"
+            placeholder={messages.minPrice}
+            value={minPrice}
+            onChange={(e) => setMinPrice(e.target.value)}
+            className={`${filterControlClasses} w-full sm:w-28`}
+          />
+          <input
+            type="number"
+            placeholder={messages.maxPrice}
+            value={maxPrice}
+            onChange={(e) => setMaxPrice(e.target.value)}
+            className={`${filterControlClasses} w-full sm:w-28`}
+          />
+        </div>
       </div>
 
       {/* Grid */}

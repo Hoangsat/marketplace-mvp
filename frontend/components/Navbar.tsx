@@ -54,9 +54,6 @@ export default function Navbar() {
           </Link>
 
           <div className="flex items-center gap-3 text-sm">
-            <Link href="/" className="text-gray-600 hover:text-gray-900">
-              {messages.home}
-            </Link>
             <Link href="/catalog" className="text-gray-600 hover:text-gray-900">
               {messages.catalog}
             </Link>
