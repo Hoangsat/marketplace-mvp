@@ -4,10 +4,12 @@
 
 import { useEffect, useState, useCallback } from "react";
 import { apiFetch } from "@/lib/api";
+import { useLanguage } from "@/components/LanguageProvider";
 import { Category, Product } from "@/lib/types";
 import ProductCard from "@/components/ProductCard";
 
 export default function HomePage() {
+  const { messages } = useLanguage();
   const [products, setProducts] = useState<Product[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
   const [loading, setLoading] = useState(true);
@@ -46,13 +48,13 @@ export default function HomePage() {
 
   return (
     <div>
-      <h1 className="text-2xl font-bold mb-4">Browse Products</h1>
+      <h1 className="text-2xl font-bold mb-4">{messages.browseProducts}</h1>
 
       {/* Filters */}
       <div className="flex flex-wrap gap-3 mb-6">
         <input
           type="text"
-          placeholder="Search products..."
+          placeholder={messages.searchProducts}
           value={search}
           onChange={(e) => setSearch(e.target.value)}
           className="border border-gray-300 rounded px-3 py-2 text-sm flex-1 min-w-48 focus:outline-none focus:ring-2 focus:ring-orange-400"
@@ -62,7 +64,7 @@ export default function HomePage() {
           onChange={(e) => setCategoryId(e.target.value)}
           className="border border-gray-300 rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-orange-400"
         >
-          <option value="">All Categories</option>
+          <option value="">{messages.allCategories}</option>
           {categories.map((c) => (
             <option key={c.id} value={c.id}>
               {c.name}
@@ -71,14 +73,14 @@ export default function HomePage() {
         </select>
         <input
           type="number"
-          placeholder="Min $"
+          placeholder={messages.minPrice}
           value={minPrice}
           onChange={(e) => setMinPrice(e.target.value)}
           className="border border-gray-300 rounded px-3 py-2 text-sm w-24 focus:outline-none focus:ring-2 focus:ring-orange-400"
         />
         <input
           type="number"
-          placeholder="Max $"
+          placeholder={messages.maxPrice}
           value={maxPrice}
           onChange={(e) => setMaxPrice(e.target.value)}
           className="border border-gray-300 rounded px-3 py-2 text-sm w-24 focus:outline-none focus:ring-2 focus:ring-orange-400"
@@ -87,9 +89,9 @@ export default function HomePage() {
 
       {/* Grid */}
       {loading ? (
-        <p className="text-gray-500 text-sm">Loading products...</p>
+        <p className="text-gray-500 text-sm">{messages.loadingProducts}</p>
       ) : products.length === 0 ? (
-        <p className="text-gray-500 text-sm">No products found.</p>
+        <p className="text-gray-500 text-sm">{messages.noProducts}</p>
       ) : (
         <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4">
           {products.map((p) => (

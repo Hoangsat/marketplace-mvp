@@ -3,25 +3,31 @@
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import { apiFetch } from "@/lib/api";
+import { useLanguage } from "@/components/LanguageProvider";
 import { Game } from "@/lib/types";
+import { Language } from "@/lib/i18n";
 
-function getDisplayName(game: Game) {
-  return game.display_name_vi || game.name;
+function getDisplayName(game: Game, language: Language) {
+  if (language === "vi") {
+    return game.display_name_vi || game.name;
+  }
+  return game.name;
 }
 
 export default function CatalogPage() {
+  const { language, messages } = useLanguage();
   const [games, setGames] = useState<Game[]>([]);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  const [error, setError] = useState(false);
 
   useEffect(() => {
     apiFetch<Game[]>("/games")
       .then((data) => {
         setGames(data);
-        setError(null);
+        setError(false);
       })
-      .catch((e: unknown) => {
-        setError(e instanceof Error ? e.message : "Unable to load catalog.");
+      .catch(() => {
+        setError(true);
         setGames([]);
       })
       .finally(() => setLoading(false));
@@ -30,16 +36,16 @@ export default function CatalogPage() {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-2xl font-bold">Catalog</h1>
-        <p className="text-sm text-gray-500 mt-1">Choose a game to continue.</p>
+        <h1 className="text-2xl font-bold">{messages.catalog}</h1>
+        <p className="text-sm text-gray-500 mt-1">{messages.chooseGame}</p>
       </div>
 
       {loading ? (
-        <p className="text-gray-500 text-sm">Loading games...</p>
+        <p className="text-gray-500 text-sm">{messages.loadingGames}</p>
       ) : error ? (
-        <p className="text-red-600 text-sm">{error}</p>
+        <p className="text-red-600 text-sm">{messages.loadCatalogError}</p>
       ) : games.length === 0 ? (
-        <p className="text-gray-500 text-sm">No games available.</p>
+        <p className="text-gray-500 text-sm">{messages.noGames}</p>
       ) : (
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
           {games.map((game) => (
@@ -48,7 +54,9 @@ export default function CatalogPage() {
               href={`/catalog/${game.slug}`}
               className="block rounded-lg border border-gray-200 bg-white p-5 hover:shadow-md transition-shadow"
             >
-              <p className="font-semibold text-gray-900">{getDisplayName(game)}</p>
+              <p className="font-semibold text-gray-900">
+                {getDisplayName(game, language)}
+              </p>
               <p className="mt-1 text-sm text-gray-500">{game.name}</p>
             </Link>
           ))}

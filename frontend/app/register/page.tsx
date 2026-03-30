@@ -6,10 +6,12 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { apiFetch } from "@/lib/api";
+import { useLanguage } from "@/components/LanguageProvider";
 import { showToast } from "@/components/Toast";
 
 export default function RegisterPage() {
   const router = useRouter();
+  const { messages } = useLanguage();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
@@ -21,7 +23,7 @@ export default function RegisterPage() {
     setPasswordError("");
 
     if (password !== confirmPassword) {
-      setPasswordError("Passwords do not match");
+      setPasswordError(messages.passwordsDoNotMatch);
       return;
     }
 
@@ -31,10 +33,13 @@ export default function RegisterPage() {
         method: "POST",
         body: JSON.stringify({ email, password }),
       });
-      showToast("Account created! Please log in.", "success");
+      showToast(messages.accountCreated, "success");
       router.push("/login");
     } catch (err: unknown) {
-      showToast(err instanceof Error ? err.message : "Registration failed", "error");
+      showToast(
+        err instanceof Error ? err.message : messages.registrationFailed,
+        "error"
+      );
     } finally {
       setLoading(false);
     }
@@ -42,10 +47,10 @@ export default function RegisterPage() {
 
   return (
     <div className="max-w-sm mx-auto mt-12">
-      <h1 className="text-2xl font-bold mb-6">Create Account</h1>
+      <h1 className="text-2xl font-bold mb-6">{messages.createAccountTitle}</h1>
       <form onSubmit={handleSubmit} className="space-y-4">
         <div>
-          <label className="block text-sm font-medium mb-1">Email</label>
+          <label className="block text-sm font-medium mb-1">{messages.email}</label>
           <input
             type="email"
             required
@@ -55,7 +60,9 @@ export default function RegisterPage() {
           />
         </div>
         <div>
-          <label className="block text-sm font-medium mb-1">Password</label>
+          <label className="block text-sm font-medium mb-1">
+            {messages.password}
+          </label>
           <input
             type="password"
             required
@@ -66,7 +73,9 @@ export default function RegisterPage() {
           />
         </div>
         <div>
-          <label className="block text-sm font-medium mb-1">Confirm Password</label>
+          <label className="block text-sm font-medium mb-1">
+            {messages.confirmPassword}
+          </label>
           <input
             type="password"
             required
@@ -84,13 +93,13 @@ export default function RegisterPage() {
           disabled={loading}
           className="w-full bg-orange-600 text-white py-2 rounded font-medium hover:bg-orange-700 disabled:opacity-50"
         >
-          {loading ? "Creating account..." : "Register"}
+          {loading ? messages.creatingAccount : messages.createAccount}
         </button>
       </form>
       <p className="mt-4 text-sm text-gray-500 text-center">
-        Already have an account?{" "}
+        {messages.alreadyHaveAccount}{" "}
         <Link href="/login" className="text-orange-600 hover:underline">
-          Login
+          {messages.login}
         </Link>
       </p>
     </div>

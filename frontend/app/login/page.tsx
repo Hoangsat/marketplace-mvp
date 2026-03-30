@@ -6,6 +6,7 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { API_BASE_URL } from "@/lib/api";
+import { useLanguage } from "@/components/LanguageProvider";
 import { setToken } from "@/lib/auth";
 import { showToast } from "@/components/Toast";
 
@@ -16,6 +17,7 @@ interface TokenResponse {
 
 export default function LoginPage() {
   const router = useRouter();
+  const { messages } = useLanguage();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
@@ -40,16 +42,19 @@ export default function LoginPage() {
 
       if (!res.ok) {
         const data = await res.json();
-        throw new Error(data?.detail ?? "Login failed");
+        throw new Error(data?.detail ?? messages.loginFailed);
       }
 
       const data: TokenResponse = await res.json();
       setToken(data.access_token);
-      showToast("Logged in!", "success");
+      showToast(messages.loggedIn, "success");
       router.refresh();
       router.push("/");
     } catch (err: unknown) {
-      showToast(err instanceof Error ? err.message : "Login failed", "error");
+      showToast(
+        err instanceof Error ? err.message : messages.loginFailed,
+        "error"
+      );
     } finally {
       setLoading(false);
     }
@@ -57,10 +62,10 @@ export default function LoginPage() {
 
   return (
     <div className="max-w-sm mx-auto mt-12">
-      <h1 className="text-2xl font-bold mb-6">Login</h1>
+      <h1 className="text-2xl font-bold mb-6">{messages.loginTitle}</h1>
       <form onSubmit={handleSubmit} className="space-y-4">
         <div>
-          <label className="block text-sm font-medium mb-1">Email</label>
+          <label className="block text-sm font-medium mb-1">{messages.email}</label>
           <input
             type="email"
             required
@@ -70,7 +75,9 @@ export default function LoginPage() {
           />
         </div>
         <div>
-          <label className="block text-sm font-medium mb-1">Password</label>
+          <label className="block text-sm font-medium mb-1">
+            {messages.password}
+          </label>
           <input
             type="password"
             required
@@ -84,13 +91,13 @@ export default function LoginPage() {
           disabled={loading}
           className="w-full bg-orange-600 text-white py-2 rounded font-medium hover:bg-orange-700 disabled:opacity-50"
         >
-          {loading ? "Logging in..." : "Login"}
+          {loading ? messages.loggingIn : messages.login}
         </button>
       </form>
       <p className="mt-4 text-sm text-gray-500 text-center">
-        Don&apos;t have an account?{" "}
+        {messages.dontHaveAccount}{" "}
         <Link href="/register" className="text-orange-600 hover:underline">
-          Register
+          {messages.register}
         </Link>
       </p>
     </div>

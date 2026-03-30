@@ -4,15 +4,23 @@ import Link from "next/link";
 import { useEffect, useState } from "react";
 import { useParams } from "next/navigation";
 import { apiFetch } from "@/lib/api";
+import { useLanguage } from "@/components/LanguageProvider";
 import ProductCard from "@/components/ProductCard";
 import { Game, OfferType, Product } from "@/lib/types";
+import { Language } from "@/lib/i18n";
 
-function getGameName(game: Game) {
-  return game.display_name_vi || game.name;
+function getGameName(game: Game, language: Language) {
+  if (language === "vi") {
+    return game.display_name_vi || game.name;
+  }
+  return game.name;
 }
 
-function getOfferTypeName(offerType: OfferType) {
-  return offerType.display_name_vi || offerType.name;
+function getOfferTypeName(offerType: OfferType, language: Language) {
+  if (language === "vi") {
+    return offerType.display_name_vi || offerType.name;
+  }
+  return offerType.name;
 }
 
 export default function CatalogOfferTypePage() {
@@ -20,11 +28,12 @@ export default function CatalogOfferTypePage() {
     gameSlug: string;
     offerTypeSlug: string;
   }>();
+  const { language, messages } = useLanguage();
   const [game, setGame] = useState<Game | null>(null);
   const [offerType, setOfferType] = useState<OfferType | null>(null);
   const [products, setProducts] = useState<Product[]>([]);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  const [error, setError] = useState(false);
 
   useEffect(() => {
     Promise.all([apiFetch<Game[]>("/games"), apiFetch<OfferType[]>("/offer-types")])
@@ -37,7 +46,7 @@ export default function CatalogOfferTypePage() {
           setGame(selectedGame);
           setOfferType(selectedOfferType);
           setProducts([]);
-          setError(null);
+          setError(false);
           return;
         }
 
@@ -50,21 +59,21 @@ export default function CatalogOfferTypePage() {
         setGame(selectedGame);
         setOfferType(selectedOfferType);
         setProducts(productData);
-        setError(null);
+        setError(false);
       })
-      .catch((e: unknown) => {
+      .catch(() => {
         setGame(null);
         setOfferType(null);
         setProducts([]);
-        setError(e instanceof Error ? e.message : "Unable to load products.");
+        setError(true);
       })
       .finally(() => setLoading(false));
   }, [gameSlug, offerTypeSlug]);
 
   const missingMessage = !game
-    ? "Game not found."
+    ? messages.gameNotFound
     : !offerType
-      ? "Offer type not found."
+      ? messages.offerTypeNotFound
       : null;
 
   return (
@@ -74,28 +83,31 @@ export default function CatalogOfferTypePage() {
           href={game ? `/catalog/${game.slug}` : "/catalog"}
           className="text-sm text-orange-600 hover:underline"
         >
-          Back to offer types
+          {messages.backToOfferTypes}
         </Link>
         <div>
           <h1 className="text-2xl font-bold">
             {game && offerType
-              ? `${getGameName(game)} / ${getOfferTypeName(offerType)}`
-              : "Catalog"}
+              ? `${getGameName(game, language)} / ${getOfferTypeName(
+                  offerType,
+                  language
+                )}`
+              : messages.catalog}
           </h1>
           <p className="text-sm text-gray-500 mt-1">
-            Browse products for this catalog selection.
+            {messages.browseProductsForSelection}
           </p>
         </div>
       </div>
 
       {loading ? (
-        <p className="text-gray-500 text-sm">Loading products...</p>
+        <p className="text-gray-500 text-sm">{messages.loadingProducts}</p>
       ) : error ? (
-        <p className="text-red-600 text-sm">{error}</p>
+        <p className="text-red-600 text-sm">{messages.loadProductsError}</p>
       ) : missingMessage ? (
         <p className="text-gray-500 text-sm">{missingMessage}</p>
       ) : products.length === 0 ? (
-        <p className="text-gray-500 text-sm">No products found.</p>
+        <p className="text-gray-500 text-sm">{messages.noProducts}</p>
       ) : (
         <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4">
           {products.map((product) => (

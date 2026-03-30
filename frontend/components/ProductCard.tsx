@@ -1,7 +1,10 @@
+"use client";
+
 // components/ProductCard.tsx
 import Link from "next/link";
 import Image from "next/image";
 import { API_BASE_URL } from "@/lib/api";
+import { useLanguage } from "@/components/LanguageProvider";
 import { Product } from "@/lib/types";
 
 interface Props {
@@ -9,6 +12,7 @@ interface Props {
 }
 
 export default function ProductCard({ product }: Props) {
+  const { messages } = useLanguage();
   const imgSrc =
     product.images?.[0] ? `${API_BASE_URL}${product.images[0]}` : null;
 
@@ -40,7 +44,9 @@ export default function ProductCard({ product }: Props) {
           ${product.price.toFixed(2)}
         </p>
         <p className="text-xs text-gray-400 mt-0.5">
-          {product.stock > 0 ? `${product.stock} in stock` : "Out of stock"}
+          {product.stock > 0
+            ? messages.inStock(product.stock)
+            : messages.outOfStock}
         </p>
       </div>
     </Link>

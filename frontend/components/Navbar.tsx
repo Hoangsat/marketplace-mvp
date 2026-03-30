@@ -3,19 +3,28 @@
 // components/Navbar.tsx
 import Link from "next/link";
 import { useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
 import { getToken, removeToken } from "@/lib/auth";
 import { getCart } from "@/lib/cart";
-import { useRouter } from "next/navigation";
+import { useLanguage } from "@/components/LanguageProvider";
 
 export default function Navbar() {
   const router = useRouter();
-  const [loggedIn, setLoggedIn] = useState(false);
-  const [cartCount, setCartCount] = useState(0);
+  const { language, setLanguage, messages } = useLanguage();
+  const [loggedIn, setLoggedIn] = useState(() => {
+    if (typeof window === "undefined") {
+      return false;
+    }
+    return !!getToken();
+  });
+  const [cartCount, setCartCount] = useState(() => {
+    if (typeof window === "undefined") {
+      return 0;
+    }
+    return getCart().reduce((s, c) => s + c.quantity, 0);
+  });
 
   useEffect(() => {
-    setLoggedIn(!!getToken());
-    setCartCount(getCart().reduce((s, c) => s + c.quantity, 0));
-
     // Update on storage changes (from other tabs or same-page mutations)
     const handler = () => {
       setLoggedIn(!!getToken());
@@ -42,36 +51,50 @@ export default function Navbar() {
   return (
     <nav className="sticky top-0 z-50 bg-white border-b border-gray-200 shadow-sm">
       <div className="max-w-6xl mx-auto px-4 h-14 flex items-center justify-between gap-4">
-        <Link href="/" className="text-lg font-bold text-orange-600 shrink-0">
-          MarketPy
-        </Link>
+        <div className="flex items-center gap-4 shrink-0">
+          <Link href="/" className="text-lg font-bold text-orange-600 shrink-0">
+            MarketPy
+          </Link>
+
+          <div className="flex items-center gap-3 text-sm">
+            <Link href="/" className="text-gray-600 hover:text-gray-900">
+              {messages.home}
+            </Link>
+            <Link href="/catalog" className="text-gray-600 hover:text-gray-900">
+              {messages.catalog}
+            </Link>
+          </div>
+        </div>
 
         <div className="flex items-center gap-3 text-sm">
           {loggedIn ? (
             <>
               <Link href="/orders" className="text-gray-600 hover:text-gray-900">
-                Orders
+                {messages.orders}
               </Link>
-              <Link href="/seller/dashboard" className="text-gray-600 hover:text-gray-900">
-                Seller
+              <Link
+                href="/seller/dashboard"
+                className="text-gray-600 hover:text-gray-900"
+              >
+                {messages.seller}
               </Link>
               <button
                 onClick={handleLogout}
                 className="text-gray-600 hover:text-gray-900"
               >
-                Logout
+                {messages.logout}
               </button>
             </>
           ) : (
             <>
               <Link href="/login" className="text-gray-600 hover:text-gray-900">
-                Login
+                {messages.login}
               </Link>
               <Link
                 href="/register"
                 className="bg-orange-600 text-white px-3 py-1.5 rounded hover:bg-orange-700"
               >
-                Register
+                {messages.register}
               </Link>
             </>
           )}
@@ -80,13 +103,35 @@ export default function Navbar() {
             href="/cart"
             className="relative flex items-center gap-1 text-gray-700 hover:text-gray-900"
           >
-            🛒
+            <span>{messages.cart}</span>
             {cartCount > 0 && (
               <span className="absolute -top-2 -right-2 bg-orange-600 text-white text-xs w-4 h-4 rounded-full flex items-center justify-center">
                 {cartCount}
               </span>
             )}
           </Link>
+
+          <div className="flex items-center gap-1 rounded-full border border-gray-200 px-2 py-1 text-xs">
+            <button
+              type="button"
+              onClick={() => setLanguage("vi")}
+              className={
+                language === "vi" ? "font-semibold text-orange-600" : "text-gray-500"
+              }
+            >
+              VI
+            </button>
+            <span className="text-gray-300">|</span>
+            <button
+              type="button"
+              onClick={() => setLanguage("en")}
+              className={
+                language === "en" ? "font-semibold text-orange-600" : "text-gray-500"
+              }
+            >
+              EN
+            </button>
+          </div>
         </div>
       </div>
     </nav>
