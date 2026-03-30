@@ -255,6 +255,39 @@ def release_order_funds(*, order_id):
     return _get_order_with_related(order_id)
 
 
+def mark_seller_transaction_paid_out(*, seller_transaction_id):
+    with transaction.atomic():
+        seller_transaction = (
+            SellerTransaction.objects.select_for_update()
+            .select_related("seller")
+            .filter(id=seller_transaction_id)
+            .first()
+        )
+        if not seller_transaction:
+            raise OrderFlowError("Seller transaction not found", status.HTTP_404_NOT_FOUND)
+        if seller_transaction.status != SellerTransaction.Status.AVAILABLE:
+            raise OrderFlowError(
+                "Only available seller transactions can be marked as paid out",
+                status.HTTP_400_BAD_REQUEST,
+            )
+
+        updated_count = seller_transaction.seller.__class__.objects.filter(
+            id=seller_transaction.seller_id,
+            balance_available__gte=seller_transaction.amount,
+        ).update(balance_available=F("balance_available") - seller_transaction.amount)
+        if not updated_count:
+            raise OrderFlowError(
+                "Seller does not have enough available balance to pay out",
+                status.HTTP_400_BAD_REQUEST,
+            )
+
+        seller_transaction.status = SellerTransaction.Status.PAID_OUT
+        seller_transaction.paid_at = timezone.now()
+        seller_transaction.save(update_fields=["status", "paid_at", "updated_at"])
+
+    return seller_transaction
+
+
 def mark_order_delivered(*, order_id, current_user):
     with transaction.atomic():
         order = _get_order_for_update(order_id)

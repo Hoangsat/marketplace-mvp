@@ -11,18 +11,9 @@ import { useLanguage } from "@/components/LanguageProvider";
 export default function Navbar() {
   const router = useRouter();
   const { language, setLanguage, messages } = useLanguage();
-  const [loggedIn, setLoggedIn] = useState(() => {
-    if (typeof window === "undefined") {
-      return false;
-    }
-    return !!getToken();
-  });
-  const [cartCount, setCartCount] = useState(() => {
-    if (typeof window === "undefined") {
-      return 0;
-    }
-    return getCart().reduce((s, c) => s + c.quantity, 0);
-  });
+  const [mounted, setMounted] = useState(false);
+  const [loggedIn, setLoggedIn] = useState(false);
+  const [cartCount, setCartCount] = useState(0);
 
   useEffect(() => {
     // Update on storage changes (from other tabs or same-page mutations)
@@ -30,10 +21,16 @@ export default function Navbar() {
       setLoggedIn(!!getToken());
       setCartCount(getCart().reduce((s, c) => s + c.quantity, 0));
     };
+
+    const timeoutId = window.setTimeout(() => {
+      setMounted(true);
+      handler();
+    }, 0);
     window.addEventListener("storage", handler);
     window.addEventListener("cartUpdated", handler);
     window.addEventListener("authUpdated", handler);
     return () => {
+      window.clearTimeout(timeoutId);
       window.removeEventListener("storage", handler);
       window.removeEventListener("cartUpdated", handler);
       window.removeEventListener("authUpdated", handler);
@@ -67,7 +64,16 @@ export default function Navbar() {
         </div>
 
         <div className="flex items-center gap-3 text-sm">
-          {loggedIn ? (
+          {!mounted ? (
+            <div
+              aria-hidden="true"
+              className="flex items-center gap-3 text-sm text-transparent"
+            >
+              <span className="select-none">Orders</span>
+              <span className="select-none">Seller</span>
+              <span className="select-none">Logout</span>
+            </div>
+          ) : loggedIn ? (
             <>
               <Link href="/orders" className="text-gray-600 hover:text-gray-900">
                 {messages.orders}
@@ -104,7 +110,7 @@ export default function Navbar() {
             className="relative flex items-center gap-1 text-gray-700 hover:text-gray-900"
           >
             <span>{messages.cart}</span>
-            {cartCount > 0 && (
+            {mounted && cartCount > 0 && (
               <span className="absolute -top-2 -right-2 bg-orange-600 text-white text-xs w-4 h-4 rounded-full flex items-center justify-center">
                 {cartCount}
               </span>

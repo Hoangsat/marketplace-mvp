@@ -96,9 +96,13 @@ export interface TranslationMessages {
   sellerDashboardTitle: string;
   pendingBalanceOnHold: string;
   availableBalance: string;
+  paidOutBalance: string;
+  totalEarnings: string;
   noSellerOrders: string;
   orderStatusLabel: string;
   moneyStatusLabel: string;
+  payoutStatusLabel: string;
+  sellerAmountLabel: string;
   markAsDelivered: string;
   orderMarkedDelivered: string;
   unableToLoadSellerDashboard: string;
@@ -146,6 +150,7 @@ export interface TranslationMessages {
   statusCancelled: string;
   statusOnHold: string;
   statusAvailable: string;
+  statusPaidOut: string;
   statusPendingPayment: string;
   outOfStock: string;
   inStock: (count: number) => string;
@@ -250,9 +255,13 @@ export const translations: Record<Language, TranslationMessages> = {
     sellerDashboardTitle: "Bảng điều khiển người bán",
     pendingBalanceOnHold: "Số dư chờ xử lý (Đang giữ)",
     availableBalance: "Số dư khả dụng",
+    paidOutBalance: "Đã chi trả",
+    totalEarnings: "Tổng thu nhập",
     noSellerOrders: "Chưa có đơn hàng nào cho sản phẩm của bạn.",
     orderStatusLabel: "Trạng thái đơn hàng",
     moneyStatusLabel: "Trạng thái tiền",
+    payoutStatusLabel: "Trạng thái thanh toán",
+    sellerAmountLabel: "Tiền người bán",
     markAsDelivered: "Đánh dấu đã giao",
     orderMarkedDelivered: "Đơn hàng đã được đánh dấu là đã giao",
     unableToLoadSellerDashboard:
@@ -302,6 +311,7 @@ export const translations: Record<Language, TranslationMessages> = {
     statusCancelled: "Đã hủy",
     statusOnHold: "Đang giữ",
     statusAvailable: "Khả dụng",
+    statusPaidOut: "Đã chi trả",
     statusPendingPayment: "Chờ thanh toán",
     outOfStock: "Hết hàng",
     inStock: (count) => `${count} còn hàng`,
@@ -404,9 +414,13 @@ export const translations: Record<Language, TranslationMessages> = {
     sellerDashboardTitle: "Seller Dashboard",
     pendingBalanceOnHold: "Pending Balance (On Hold)",
     availableBalance: "Available Balance",
+    paidOutBalance: "Paid Out",
+    totalEarnings: "Total Earnings",
     noSellerOrders: "No orders yet for your products.",
     orderStatusLabel: "Order Status",
     moneyStatusLabel: "Money Status",
+    payoutStatusLabel: "Payout Status",
+    sellerAmountLabel: "Seller Amount",
     markAsDelivered: "Mark as Delivered",
     orderMarkedDelivered: "Order marked as delivered",
     unableToLoadSellerDashboard: "Unable to load seller dashboard",
@@ -455,6 +469,7 @@ export const translations: Record<Language, TranslationMessages> = {
     statusCancelled: "Cancelled",
     statusOnHold: "On Hold",
     statusAvailable: "Available",
+    statusPaidOut: "Paid Out",
     statusPendingPayment: "Pending Payment",
     outOfStock: "Out of stock",
     inStock: (count) => `${count} in stock`,
@@ -483,6 +498,7 @@ export function getMoneyStatusLabel(
 ) {
   if (status === "on_hold") return messages.statusOnHold;
   if (status === "available") return messages.statusAvailable;
+  if (status === "paid_out") return messages.statusPaidOut;
   if (status === "cancelled") return messages.statusCancelled;
   if (status === "pending_payment") return messages.statusPendingPayment;
   return formatFallbackLabel(status);

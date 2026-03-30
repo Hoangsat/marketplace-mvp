@@ -84,7 +84,7 @@ export default function SellerDashboardPage() {
         <h1 className="text-2xl font-bold mb-6">
           {messages.sellerDashboardTitle}
         </h1>
-        <div className="grid gap-4 sm:grid-cols-2">
+        <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
           <div className="bg-white border border-gray-200 rounded-lg p-5">
             <p className="text-sm text-gray-500 mb-2">
               {messages.pendingBalanceOnHold}
@@ -99,6 +99,22 @@ export default function SellerDashboardPage() {
             </p>
             <p className="text-2xl font-semibold text-green-600">
               ${Number(dashboard.balance_available).toFixed(2)}
+            </p>
+          </div>
+          <div className="bg-white border border-gray-200 rounded-lg p-5">
+            <p className="text-sm text-gray-500 mb-2">
+              {messages.paidOutBalance}
+            </p>
+            <p className="text-2xl font-semibold text-slate-700">
+              ${Number(dashboard.balance_paid_out).toFixed(2)}
+            </p>
+          </div>
+          <div className="bg-white border border-gray-200 rounded-lg p-5">
+            <p className="text-sm text-gray-500 mb-2">
+              {messages.totalEarnings}
+            </p>
+            <p className="text-2xl font-semibold text-blue-700">
+              ${Number(dashboard.total_earned).toFixed(2)}
             </p>
           </div>
         </div>
@@ -124,8 +140,11 @@ export default function SellerDashboardPage() {
                   </p>
                 </div>
                 <div className="flex flex-col gap-2 text-sm sm:items-end">
+                  <p className="text-xs text-gray-500">
+                    {messages.sellerAmountLabel}
+                  </p>
                   <p className="font-semibold text-orange-600">
-                    ${Number(order.total).toFixed(2)}
+                    ${Number(order.seller_amount).toFixed(2)}
                   </p>
                   <div className="flex flex-wrap gap-2">
                     <span className="inline-block text-xs px-2 py-0.5 rounded-full font-medium bg-blue-100 text-blue-700">
@@ -134,11 +153,11 @@ export default function SellerDashboardPage() {
                     </span>
                     <span
                       className={`inline-block text-xs px-2 py-0.5 rounded-full font-medium ${getMoneyStatusClasses(
-                        order.money_status
+                        order.payout_status
                       )}`}
                     >
-                      {messages.moneyStatusLabel}:{" "}
-                      {getMoneyStatusLabel(messages, order.money_status)}
+                      {messages.payoutStatusLabel}:{" "}
+                      {getMoneyStatusLabel(messages, order.payout_status)}
                     </span>
                   </div>
                   {order.status === "paid" && (
@@ -219,6 +238,7 @@ export default function SellerDashboardPage() {
 
 function getMoneyStatusClasses(status: string) {
   if (status === "available") return "bg-green-100 text-green-700";
+  if (status === "paid_out") return "bg-slate-200 text-slate-700";
   if (status === "on_hold") return "bg-yellow-100 text-yellow-700";
   if (status === "cancelled") return "bg-gray-100 text-gray-700";
   return "bg-slate-100 text-slate-700";

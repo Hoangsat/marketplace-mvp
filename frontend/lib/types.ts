@@ -67,12 +67,28 @@ export interface SellerDashboardOrder {
   id: number;
   created_at: string;
   total: string;
+  seller_amount: string;
   status: string;
   money_status: string;
+  payout_status: string;
 }
 
 export interface SellerDashboardData {
   balance_pending: string;
   balance_available: string;
+  balance_paid_out: string;
+  total_earned: string;
   orders: SellerDashboardOrder[];
+}
+
+export interface SellerOrderItem {
+  id: number;
+  order_id: number;
+  product_id: number;
+  quantity: number;
+  price_at_purchase: number;
+  seller_amount: number;
+  order_status: string;
+  payout_status: string;
+  product: Product;
 }

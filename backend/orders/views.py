@@ -1,6 +1,6 @@
 from decimal import Decimal
 
-from django.db.models import Prefetch
+from django.db.models import Prefetch, Sum
 from rest_framework import permissions, status
 from rest_framework.parsers import JSONParser
 from rest_framework.response import Response
@@ -10,9 +10,9 @@ from common.permissions import IsAuthenticatedSeller
 from .models import Order, OrderItem, SellerTransaction
 from .serializers import (
     CheckoutSerializer,
-    OrderItemSerializer,
     OrderSerializer,
     SellerDashboardSerializer,
+    SellerOrderItemSerializer,
 )
 from .services import (
     OrderFlowError,
@@ -67,12 +67,23 @@ class SellerOrderItemListView(APIView):
     permission_classes = [permissions.IsAuthenticated, IsAuthenticatedSeller]
 
     def get(self, request):
-        items = (
+        items = list(
             OrderItem.objects.filter(product__seller_id=request.user.id)
             .exclude(order__status=Order.Status.PENDING)
             .select_related("product__category", "order")
+            .prefetch_related(
+                Prefetch(
+                    "order__seller_transactions",
+                    queryset=SellerTransaction.objects.filter(seller_id=request.user.id),
+                )
+            )
         )
-        return Response(OrderItemSerializer(items, many=True).data)
+        for item in items:
+            seller_transaction = next(iter(item.order.seller_transactions.all()), None)
+            item.seller_amount = item.price_at_purchase * item.quantity
+            item.order_status = item.order.status
+            item.payout_status = _get_payout_status(item.order, seller_transaction)
+        return Response(SellerOrderItemSerializer(items, many=True).data)
 
 
 class SellerDashboardView(APIView):
@@ -80,6 +91,13 @@ class SellerDashboardView(APIView):
 
     def get(self, request):
         current_user = request.user.__class__.objects.get(pk=request.user.pk)
+        paid_out_total = (
+            SellerTransaction.objects.filter(
+                seller_id=request.user.id,
+                status=SellerTransaction.Status.PAID_OUT,
+            ).aggregate(total=Sum("amount"))["total"]
+            or Decimal("0.00")
+        )
         orders = auto_complete_delivered_orders(
             Order.objects.filter(items__product__seller_id=request.user.id)
             .prefetch_related(
@@ -105,22 +123,17 @@ class SellerDashboardView(APIView):
                 )
 
             seller_transaction = next(iter(order.seller_transactions.all()), None)
-            if seller_transaction and seller_transaction.status == SellerTransaction.Status.AVAILABLE:
-                money_status = "available"
-            elif seller_transaction and seller_transaction.status == SellerTransaction.Status.HOLD:
-                money_status = "on_hold"
-            elif order.status == Order.Status.CANCELLED:
-                money_status = "cancelled"
-            else:
-                money_status = "pending"
+            money_status = _get_payout_status(order, seller_transaction)
 
             order_data.append(
                 {
                     "id": order.id,
                     "created_at": order.created_at,
                     "total": seller_total,
+                    "seller_amount": seller_total,
                     "status": order.status,
                     "money_status": money_status,
+                    "payout_status": money_status,
                 }
             )
 
@@ -128,6 +141,10 @@ class SellerDashboardView(APIView):
             {
                 "balance_pending": current_user.balance_pending,
                 "balance_available": current_user.balance_available,
+                "balance_paid_out": paid_out_total,
+                "total_earned": current_user.balance_pending
+                + current_user.balance_available
+                + paid_out_total,
                 "orders": order_data,
             }
         )
@@ -209,3 +226,15 @@ class AdminCancelOrderView(APIView):
         except OrderFlowError as exc:
             return Response({"detail": str(exc.detail)}, status=exc.status_code)
         return Response(OrderSerializer(order).data)
+
+
+def _get_payout_status(order, seller_transaction):
+    if seller_transaction and seller_transaction.status == SellerTransaction.Status.PAID_OUT:
+        return "paid_out"
+    if seller_transaction and seller_transaction.status == SellerTransaction.Status.AVAILABLE:
+        return "available"
+    if seller_transaction and seller_transaction.status == SellerTransaction.Status.HOLD:
+        return "on_hold"
+    if order.status == Order.Status.CANCELLED:
+        return "cancelled"
+    return "pending_payment"

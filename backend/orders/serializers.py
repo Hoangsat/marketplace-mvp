@@ -54,14 +54,42 @@ class SellerDashboardOrderSerializer(serializers.Serializer):
     id = serializers.IntegerField()
     created_at = serializers.DateTimeField()
     total = serializers.DecimalField(max_digits=12, decimal_places=2)
+    seller_amount = serializers.DecimalField(max_digits=12, decimal_places=2)
     status = serializers.CharField()
     money_status = serializers.CharField()
+    payout_status = serializers.CharField()
 
 
 class SellerDashboardSerializer(serializers.Serializer):
     balance_pending = serializers.DecimalField(max_digits=12, decimal_places=2)
     balance_available = serializers.DecimalField(max_digits=12, decimal_places=2)
+    balance_paid_out = serializers.DecimalField(max_digits=12, decimal_places=2)
+    total_earned = serializers.DecimalField(max_digits=12, decimal_places=2)
     orders = SellerDashboardOrderSerializer(many=True)
+
+
+class SellerOrderItemSerializer(serializers.ModelSerializer):
+    order_id = serializers.IntegerField(read_only=True)
+    product_id = serializers.IntegerField(read_only=True)
+    price_at_purchase = serializers.FloatField(read_only=True)
+    product = ProductSerializer(read_only=True)
+    seller_amount = serializers.FloatField(read_only=True)
+    order_status = serializers.CharField(read_only=True)
+    payout_status = serializers.CharField(read_only=True)
+
+    class Meta:
+        model = OrderItem
+        fields = (
+            "id",
+            "order_id",
+            "product_id",
+            "quantity",
+            "price_at_purchase",
+            "seller_amount",
+            "order_status",
+            "payout_status",
+            "product",
+        )
 
 
 class CheckoutItemSerializer(serializers.Serializer):
