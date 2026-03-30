@@ -11,6 +11,8 @@ class User(AbstractBaseUser, PermissionsMixin):
     is_seller = models.BooleanField(default=True)
     is_active = models.BooleanField(default=True)
     is_staff = models.BooleanField(default=False)
+    balance_pending = models.DecimalField(max_digits=12, decimal_places=2, default=0)
+    balance_available = models.DecimalField(max_digits=12, decimal_places=2, default=0)
     date_joined = models.DateTimeField(default=timezone.now)
 
     objects = UserManager()

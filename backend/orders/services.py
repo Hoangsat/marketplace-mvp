@@ -1,13 +1,16 @@
 import uuid
+from datetime import timedelta
+from decimal import Decimal
 
 from django.db import transaction
+from django.db.models import F
 from django.utils import timezone
 from rest_framework import status
 from rest_framework.exceptions import APIException
 
 from catalog.models import Product
 
-from .models import Order, OrderItem
+from .models import Order, OrderItem, SellerTransaction
 
 
 class OrderFlowError(APIException):
@@ -51,7 +54,7 @@ def create_checkout_order(*, buyer, items):
         order = Order.objects.create(
             buyer=buyer,
             total=round(total, 2),
-            status=Order.Status.PAYMENT_PENDING,
+            status=Order.Status.PENDING,
             payment_method="manual_bank",
             payment_provider=None,
             payment_reference=payment_ref,
@@ -77,7 +80,7 @@ def mark_payment_submitted(*, order_id, current_user):
         raise OrderFlowError("Order not found", status.HTTP_404_NOT_FOUND)
     if order.buyer_id != current_user.id:
         raise OrderFlowError("Not your order", status.HTTP_403_FORBIDDEN)
-    if order.status != Order.Status.PAYMENT_PENDING:
+    if order.status != Order.Status.PENDING:
         raise OrderFlowError("Order is not pending payment", status.HTTP_400_BAD_REQUEST)
 
     order.buyer_marked_paid_at = timezone.now()
@@ -94,14 +97,21 @@ def confirm_order_payment(*, order_id, current_user=None):
 
     if order.status == Order.Status.PAID:
         return order
-    if order.status != Order.Status.PAYMENT_PENDING:
+    if order.status != Order.Status.PENDING:
         raise OrderFlowError(
             f"Cannot confirm payment for order in status {order.status}",
             status.HTTP_400_BAD_REQUEST,
         )
 
     with transaction.atomic():
-        order = _get_order_with_related(order_id)
+        order = _get_order_for_update(order_id)
+        if order.status == Order.Status.PAID:
+            return _get_order_with_related(order_id)
+        if order.status != Order.Status.PENDING:
+            raise OrderFlowError(
+                f"Cannot confirm payment for order in status {order.status}",
+                status.HTTP_400_BAD_REQUEST,
+            )
         for item in order.items.all():
             if not item.product:
                 raise OrderFlowError(
@@ -117,6 +127,28 @@ def confirm_order_payment(*, order_id, current_user=None):
         for item in order.items.all():
             item.product.stock -= item.quantity
             item.product.save(update_fields=["stock"])
+
+        seller_amounts = _get_seller_amounts(order)
+        for seller_id, seller_data in seller_amounts.items():
+            seller = seller_data["seller"]
+            amount = seller_data["amount"]
+            seller_transaction, created = SellerTransaction.objects.get_or_create(
+                seller=seller,
+                order=order,
+                defaults={
+                    "amount": amount,
+                    "status": SellerTransaction.Status.HOLD,
+                },
+            )
+            if created:
+                seller.__class__.objects.filter(id=seller_id).update(
+                    balance_pending=F("balance_pending") + amount
+                )
+            elif seller_transaction.status != SellerTransaction.Status.HOLD:
+                raise OrderFlowError(
+                    "Seller transaction is not in a releasable hold state.",
+                    status.HTTP_400_BAD_REQUEST,
+                )
 
         order.status = Order.Status.PAID
         order.payment_confirmed_at = timezone.now()
@@ -135,7 +167,7 @@ def cancel_order(*, order_id):
     order = Order.objects.filter(id=order_id).first()
     if not order:
         raise OrderFlowError("Order not found", status.HTTP_404_NOT_FOUND)
-    if order.status not in [Order.Status.PAYMENT_PENDING, Order.Status.DISPUTE]:
+    if order.status not in [Order.Status.PENDING, Order.Status.DISPUTE]:
         raise OrderFlowError(
             "Cannot cancel order in current state",
             status.HTTP_400_BAD_REQUEST,
@@ -151,16 +183,139 @@ def get_order_for_user(*, order_id, current_user):
     if not order:
         raise OrderFlowError("Order not found", status.HTTP_404_NOT_FOUND)
 
-    seller_ids = [item.product.seller_id for item in order.items.all() if item.product]
-    if order.buyer_id != current_user.id and current_user.id not in seller_ids:
+    seller_ids = {item.product.seller_id for item in order.items.all() if item.product}
+    if order.buyer_id == current_user.id:
+        return order
+    if seller_ids == {current_user.id}:
+        return order
+    if current_user.id not in seller_ids:
         raise OrderFlowError("Not your order", status.HTTP_403_FORBIDDEN)
-    return order
+    raise OrderFlowError("Not your order", status.HTTP_403_FORBIDDEN)
+
+
+def release_order_funds(*, order_id):
+    with transaction.atomic():
+        order = _get_order_for_update(order_id)
+        if not order:
+            raise OrderFlowError("Order not found", status.HTTP_404_NOT_FOUND)
+        if order.status != Order.Status.PAID:
+            raise OrderFlowError(
+                "Only paid orders can release seller funds",
+                status.HTTP_400_BAD_REQUEST,
+            )
+
+        hold_transactions = list(
+            order.seller_transactions.select_related("seller").filter(
+                status=SellerTransaction.Status.HOLD
+            )
+        )
+        if not hold_transactions:
+            raise OrderFlowError(
+                "This order has no held seller funds to release",
+                status.HTTP_400_BAD_REQUEST,
+            )
+
+        for seller_transaction in hold_transactions:
+            seller = seller_transaction.seller
+            if seller.balance_pending < seller_transaction.amount:
+                raise OrderFlowError(
+                    f"Seller {seller.email} does not have enough pending balance to release",
+                    status.HTTP_400_BAD_REQUEST,
+                )
+            seller.__class__.objects.filter(id=seller.id).update(
+                balance_pending=F("balance_pending") - seller_transaction.amount,
+                balance_available=F("balance_available") + seller_transaction.amount,
+            )
+
+            seller_transaction.status = SellerTransaction.Status.AVAILABLE
+            seller_transaction.save(update_fields=["status", "updated_at"])
+
+    return _get_order_with_related(order_id)
+
+
+def mark_order_delivered(*, order_id, current_user):
+    with transaction.atomic():
+        order = _get_order_for_update(order_id)
+        if not order:
+            raise OrderFlowError("Order not found", status.HTTP_404_NOT_FOUND)
+
+        seller_ids = {item.product.seller_id for item in order.items.all() if item.product}
+        if seller_ids != {current_user.id}:
+            raise OrderFlowError("Not your order", status.HTTP_403_FORBIDDEN)
+        if order.status != Order.Status.PAID:
+            raise OrderFlowError(
+                "Only paid orders can be marked as delivered",
+                status.HTTP_400_BAD_REQUEST,
+            )
+
+        order.status = Order.Status.DELIVERED
+        order.delivered_at = timezone.now()
+        order.save(update_fields=["status", "delivered_at"])
+
+    return _get_order_with_related(order_id)
+
+
+def mark_order_completed(*, order_id, current_user):
+    with transaction.atomic():
+        order = _get_order_for_update(order_id)
+        if not order:
+            raise OrderFlowError("Order not found", status.HTTP_404_NOT_FOUND)
+        if order.buyer_id != current_user.id:
+            raise OrderFlowError("Not your order", status.HTTP_403_FORBIDDEN)
+        if order.status != Order.Status.DELIVERED:
+            raise OrderFlowError(
+                "Only delivered orders can be marked as completed",
+                status.HTTP_400_BAD_REQUEST,
+            )
+
+        order.status = Order.Status.COMPLETED
+        order.save(update_fields=["status"])
+
+    return _get_order_with_related(order_id)
+
+
+def auto_complete_delivered_orders(queryset):
+    """
+    Lazy auto-complete: updates delivered orders older than 3 days to completed.
+    Applied only to the current user's queryset.
+    """
+    cutoff = timezone.now() - timedelta(days=3)
+    queryset.filter(
+        status=Order.Status.DELIVERED,
+        delivered_at__isnull=False,
+        delivered_at__lte=cutoff,
+    ).update(status=Order.Status.COMPLETED)
+    return queryset
 
 
 def _get_order_with_related(order_id):
     return (
         Order.objects.filter(id=order_id)
-        .prefetch_related("items__product__category")
+        .prefetch_related("items__product__category", "seller_transactions__seller")
         .select_related("buyer")
         .first()
     )
+
+
+def _get_order_for_update(order_id):
+    return (
+        Order.objects.select_for_update()
+        .filter(id=order_id)
+        .prefetch_related("items__product__seller")
+        .select_related("buyer")
+        .first()
+    )
+
+
+def _get_seller_amounts(order):
+    seller_amounts = {}
+    for item in order.items.all():
+        seller_id = item.product.seller_id
+        line_total = Decimal(str(item.price_at_purchase)) * Decimal(item.quantity)
+        if seller_id not in seller_amounts:
+            seller_amounts[seller_id] = {
+                "seller": item.product.seller,
+                "amount": Decimal("0.00"),
+            }
+        seller_amounts[seller_id]["amount"] += line_total
+    return seller_amounts

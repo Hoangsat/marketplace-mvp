@@ -22,6 +22,8 @@ export interface User {
   id: number;
   email: string;
   is_seller: boolean;
+  balance_pending?: string;
+  balance_available?: string;
 }
 
 export interface OrderItem {
@@ -45,4 +47,18 @@ export interface Order {
   buyer_marked_paid_at?: string | null;
   created_at: string;
   items: OrderItem[];
+}
+
+export interface SellerDashboardOrder {
+  id: number;
+  created_at: string;
+  total: string;
+  status: string;
+  money_status: string;
+}
+
+export interface SellerDashboardData {
+  balance_pending: string;
+  balance_available: string;
+  orders: SellerDashboardOrder[];
 }

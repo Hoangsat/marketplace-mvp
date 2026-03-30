@@ -1,7 +1,10 @@
 from django.contrib import admin
+from django.contrib import messages
+
+from .models import Order, OrderItem, SellerTransaction
 from django.utils import timezone
 
-from .models import Order, OrderItem
+from .services import OrderFlowError, confirm_order_payment, release_order_funds
 
 
 class OrderItemInline(admin.TabularInline):
@@ -18,20 +21,54 @@ class OrderAdmin(admin.ModelAdmin):
     ordering = ("-id",)
     autocomplete_fields = ("buyer",)
     inlines = [OrderItemInline]
-    actions = ("mark_as_paid", "mark_as_shipped")
+    actions = ("mark_as_paid", "release_held_funds", "mark_as_shipped")
     list_select_related = ("buyer",)
     date_hierarchy = "created_at"
 
     @admin.action(description="Mark selected orders as paid")
     def mark_as_paid(self, request, queryset):
-        queryset.update(
-            status=Order.Status.PAID,
-            payment_confirmed_at=timezone.now(),
-        )
+        confirmed_count = 0
+        for order in queryset:
+            try:
+                confirm_order_payment(order_id=order.id)
+                confirmed_count += 1
+            except OrderFlowError as exc:
+                self.message_user(request, str(exc.detail), level=messages.WARNING)
+        if confirmed_count:
+            self.message_user(
+                request,
+                f"Confirmed payment for {confirmed_count} order(s).",
+                level=messages.SUCCESS,
+            )
+
+    @admin.action(description="Release held seller funds")
+    def release_held_funds(self, request, queryset):
+        released_count = 0
+        for order in queryset:
+            try:
+                release_order_funds(order_id=order.id)
+                released_count += 1
+            except OrderFlowError as exc:
+                self.message_user(request, str(exc.detail), level=messages.WARNING)
+        if released_count:
+            self.message_user(
+                request,
+                f"Released held funds for {released_count} order(s).",
+                level=messages.SUCCESS,
+            )
 
     @admin.action(description="Mark selected orders as shipped")
     def mark_as_shipped(self, request, queryset):
-        queryset.update(status=Order.Status.DELIVERED)
+        updated_count = queryset.filter(status=Order.Status.PAID).update(
+            status=Order.Status.DELIVERED,
+            delivered_at=timezone.now(),
+        )
+        if updated_count:
+            self.message_user(
+                request,
+                f"Marked {updated_count} paid order(s) as delivered.",
+                level=messages.SUCCESS,
+            )
 
 
 @admin.register(OrderItem)
@@ -41,3 +78,12 @@ class OrderItemAdmin(admin.ModelAdmin):
     list_filter = ("order__status", "product__category")
     ordering = ("-id",)
     autocomplete_fields = ("order", "product")
+
+
+@admin.register(SellerTransaction)
+class SellerTransactionAdmin(admin.ModelAdmin):
+    list_display = ("id", "seller", "order", "amount", "status", "created_at", "updated_at")
+    search_fields = ("seller__email", "order__payment_reference")
+    list_filter = ("status", "created_at")
+    ordering = ("-id",)
+    autocomplete_fields = ("seller", "order")

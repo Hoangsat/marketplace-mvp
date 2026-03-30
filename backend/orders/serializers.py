@@ -48,6 +48,20 @@ class OrderSerializer(serializers.ModelSerializer):
         )
 
 
+class SellerDashboardOrderSerializer(serializers.Serializer):
+    id = serializers.IntegerField()
+    created_at = serializers.DateTimeField()
+    total = serializers.DecimalField(max_digits=12, decimal_places=2)
+    status = serializers.CharField()
+    money_status = serializers.CharField()
+
+
+class SellerDashboardSerializer(serializers.Serializer):
+    balance_pending = serializers.DecimalField(max_digits=12, decimal_places=2)
+    balance_available = serializers.DecimalField(max_digits=12, decimal_places=2)
+    orders = SellerDashboardOrderSerializer(many=True)
+
+
 class CheckoutItemSerializer(serializers.Serializer):
     product_id = serializers.IntegerField()
     quantity = serializers.IntegerField()

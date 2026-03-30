@@ -6,6 +6,7 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { apiFetch } from "@/lib/api";
 import { getToken } from "@/lib/auth";
+import { showToast } from "@/components/Toast";
 import { Order } from "@/lib/types";
 
 export default function OrdersPage() {
@@ -20,6 +21,22 @@ export default function OrdersPage() {
       .catch(() => {})
       .finally(() => setLoading(false));
   }, [router]);
+
+  async function handleMarkCompleted(orderId: number) {
+    try {
+      const updatedOrder = await apiFetch<Order>(`/orders/${orderId}/mark-completed`, {
+        method: "POST",
+      });
+      setOrders((currentOrders) =>
+        currentOrders.map((order) => (order.id === orderId ? updatedOrder : order))
+      );
+    } catch (err: unknown) {
+      showToast(
+        err instanceof Error ? err.message : "Unable to update order",
+        "error"
+      );
+    }
+  }
 
   if (loading) return <p className="text-gray-500">Loading orders...</p>;
 
@@ -44,16 +61,16 @@ export default function OrdersPage() {
                     className={`inline-block text-xs px-2 py-0.5 rounded-full font-medium ${
                       order.status === "paid" || order.status === "delivered"
                         ? "bg-green-100 text-green-700"
-                        : order.status === "payment_pending"
+                        : order.status === "pending"
                         ? "bg-yellow-100 text-yellow-700"
                         : order.status === "cancelled"
                         ? "bg-gray-100 text-gray-700"
                         : "bg-blue-100 text-blue-700"
                     }`}
                   >
-                    {order.status.replace("_", " ")}
+                    {formatOrderStatus(order.status)}
                   </span>
-                  {order.status === "payment_pending" && !order.buyer_marked_paid_at && (
+                  {order.status === "pending" && !order.buyer_marked_paid_at && (
                     <button
                       onClick={() => router.push(`/orders/${order.id}/payment`)}
                       className="mt-2 text-xs bg-orange-600 text-white px-3 py-1 rounded hover:bg-orange-700 transition"
@@ -61,8 +78,16 @@ export default function OrdersPage() {
                       Complete Payment
                     </button>
                   )}
-                  {order.status === "payment_pending" && order.buyer_marked_paid_at && (
+                  {order.status === "pending" && order.buyer_marked_paid_at && (
                     <p className="mt-2 text-xs text-orange-600 font-medium">Payment evaluating...</p>
+                  )}
+                  {order.status === "delivered" && (
+                    <button
+                      onClick={() => handleMarkCompleted(order.id)}
+                      className="mt-2 text-xs bg-blue-600 text-white px-3 py-1 rounded hover:bg-blue-700 transition"
+                    >
+                      Mark as Completed
+                    </button>
                   )}
                   <p className="text-orange-600 font-semibold mt-1">${order.total.toFixed(2)}</p>
                 </div>
@@ -81,4 +106,8 @@ export default function OrdersPage() {
       )}
     </div>
   );
+}
+
+function formatOrderStatus(status: string) {
+  return status.replace("_", " ").replace(/\b\w/g, (char) => char.toUpperCase());
 }

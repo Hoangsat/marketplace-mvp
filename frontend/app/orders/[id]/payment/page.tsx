@@ -33,11 +33,11 @@ export default function OrderPaymentPage() {
   async function handleMarkPaid() {
     setSubmitting(true);
     try {
-      const updatedOrder = await apiFetch<Order>(`/orders/${id}/confirm-payment`, {
+      const updatedOrder = await apiFetch<Order>(`/orders/${id}/mark-payment-submitted`, {
         method: "POST"
       });
       setOrder(updatedOrder);
-      showToast("Payment confirmed!", "success");
+      showToast("Payment submitted for confirmation.", "success");
     } catch (err: unknown) {
       showToast(err instanceof Error ? err.message : "Failed to submit", "error");
     } finally {

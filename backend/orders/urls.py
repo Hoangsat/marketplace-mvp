@@ -6,8 +6,11 @@ from .views import (
     BuyerOrderListView,
     CheckoutView,
     ConfirmPaymentView,
+    MarkCompletedView,
+    MarkDeliveredView,
     MarkPaymentSubmittedView,
     OrderDetailView,
+    SellerDashboardView,
     SellerOrderItemListView,
 )
 
@@ -15,6 +18,7 @@ from .views import (
 urlpatterns = [
     path("orders/checkout", CheckoutView.as_view(), name="orders-checkout"),
     path("orders/buyer", BuyerOrderListView.as_view(), name="orders-buyer"),
+    path("seller/dashboard", SellerDashboardView.as_view(), name="seller-dashboard"),
     path("orders/seller", SellerOrderItemListView.as_view(), name="orders-seller"),
     path("orders/<int:order_id>", OrderDetailView.as_view(), name="orders-detail"),
     path(
@@ -26,6 +30,16 @@ urlpatterns = [
         "orders/<int:order_id>/confirm-payment",
         ConfirmPaymentView.as_view(),
         name="orders-confirm-payment",
+    ),
+    path(
+        "orders/<int:order_id>/mark-delivered",
+        MarkDeliveredView.as_view(),
+        name="orders-mark-delivered",
+    ),
+    path(
+        "orders/<int:order_id>/mark-completed",
+        MarkCompletedView.as_view(),
+        name="orders-mark-completed",
     ),
     path(
         "admin/orders/<int:order_id>/confirm-payment",
