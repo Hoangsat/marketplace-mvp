@@ -33,11 +33,11 @@ export default function OrderPaymentPage() {
   async function handleMarkPaid() {
     setSubmitting(true);
     try {
-      const updatedOrder = await apiFetch<Order>(`/orders/${id}/mark-payment-submitted`, {
+      const updatedOrder = await apiFetch<Order>(`/orders/${id}/confirm-payment`, {
         method: "POST"
       });
       setOrder(updatedOrder);
-      showToast("Payment submitted for review!", "success");
+      showToast("Payment confirmed!", "success");
     } catch (err: unknown) {
       showToast(err instanceof Error ? err.message : "Failed to submit", "error");
     } finally {
@@ -59,9 +59,9 @@ export default function OrderPaymentPage() {
           <p>Please transfer exactly <span className="text-orange-600 font-bold">${order.total.toFixed(2)}</span> to the following bank account:</p>
           
           <div className="bg-gray-50 p-4 rounded-md font-mono text-sm border">
-            <div><strong>Bank:</strong> Vietcombank (Example)</div>
-            <div><strong>Account Name:</strong> MARKETPY MVP</div>
-            <div><strong>Account Number:</strong> 1234567890</div>
+            <div><strong>Bank:</strong> Techcombank</div>
+            <div><strong>Account Name:</strong> NGUYEN THI MAI LAN</div>
+            <div><strong>Account Number:</strong> 19072620168019</div>
             <div className="mt-2 text-indigo-700 font-bold bg-indigo-50 p-2 inline-block rounded">
               MEMO / NỘI DUNG: {order.payment_reference || `ORD-${order.id}`}
             </div>

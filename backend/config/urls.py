@@ -4,6 +4,10 @@ from django.contrib import admin
 from django.http import JsonResponse
 from django.urls import include, path
 
+admin.site.site_header = "Marketplace Admin"
+admin.site.site_title = "Marketplace"
+admin.site.index_title = "Dashboard"
+
 
 def root(_request):
     return JsonResponse(

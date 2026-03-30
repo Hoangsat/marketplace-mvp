@@ -92,6 +92,7 @@ MEDIA_ROOT = BASE_DIR / "media" / "uploads"
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 AUTH_USER_MODEL = "accounts.User"
 
+CORS_ALLOW_ALL_ORIGINS = DEBUG
 CORS_ALLOWED_ORIGINS = [
     origin.strip()
     for origin in os.getenv(

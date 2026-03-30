@@ -5,6 +5,7 @@ from .views import (
     AdminConfirmPaymentView,
     BuyerOrderListView,
     CheckoutView,
+    ConfirmPaymentView,
     MarkPaymentSubmittedView,
     OrderDetailView,
     SellerOrderItemListView,
@@ -20,6 +21,11 @@ urlpatterns = [
         "orders/<int:order_id>/mark-payment-submitted",
         MarkPaymentSubmittedView.as_view(),
         name="orders-mark-payment-submitted",
+    ),
+    path(
+        "orders/<int:order_id>/confirm-payment",
+        ConfirmPaymentView.as_view(),
+        name="orders-confirm-payment",
     ),
     path(
         "admin/orders/<int:order_id>/confirm-payment",

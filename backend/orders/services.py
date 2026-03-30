@@ -85,10 +85,12 @@ def mark_payment_submitted(*, order_id, current_user):
     return _get_order_with_related(order.id)
 
 
-def confirm_order_payment(*, order_id):
+def confirm_order_payment(*, order_id, current_user=None):
     order = _get_order_with_related(order_id)
     if not order:
         raise OrderFlowError("Order not found", status.HTTP_404_NOT_FOUND)
+    if current_user is not None and order.buyer_id != current_user.id:
+        raise OrderFlowError("Not your order", status.HTTP_403_FORBIDDEN)
 
     if order.status == Order.Status.PAID:
         return order
@@ -118,7 +120,13 @@ def confirm_order_payment(*, order_id):
 
         order.status = Order.Status.PAID
         order.payment_confirmed_at = timezone.now()
-        order.save(update_fields=["status", "payment_confirmed_at"])
+        if order.buyer_marked_paid_at is None:
+            order.buyer_marked_paid_at = timezone.now()
+            order.save(
+                update_fields=["status", "payment_confirmed_at", "buyer_marked_paid_at"]
+            )
+        else:
+            order.save(update_fields=["status", "payment_confirmed_at"])
 
     return _get_order_with_related(order_id)
 

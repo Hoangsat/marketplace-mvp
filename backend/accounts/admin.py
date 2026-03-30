@@ -7,9 +7,9 @@ from .models import User
 @admin.register(User)
 class UserAdmin(DjangoUserAdmin):
     model = User
-    ordering = ("id",)
-    list_display = ("id", "email", "is_seller", "is_staff", "is_active")
-    list_filter = ("is_seller", "is_staff", "is_active")
+    ordering = ("-id",)
+    list_display = ("id", "email", "is_seller", "is_staff", "is_active", "date_joined")
+    list_filter = ("is_active", "is_staff")
     search_fields = ("email",)
     readonly_fields = ("date_joined", "last_login")
     fieldsets = (

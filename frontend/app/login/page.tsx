@@ -5,7 +5,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { apiFetch } from "@/lib/api";
+import { API_BASE_URL } from "@/lib/api";
 import { setToken } from "@/lib/auth";
 import { showToast } from "@/components/Toast";
 
@@ -30,7 +30,7 @@ export default function LoginPage() {
       body.set("password", password);
 
       const res = await fetch(
-        `${process.env.NEXT_PUBLIC_API_URL}/auth/login`,
+        `${API_BASE_URL}/auth/login`,
         {
           method: "POST",
           headers: { "Content-Type": "application/x-www-form-urlencoded" },

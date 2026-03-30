@@ -1,9 +1,8 @@
 // components/ProductCard.tsx
 import Link from "next/link";
 import Image from "next/image";
+import { API_BASE_URL } from "@/lib/api";
 import { Product } from "@/lib/types";
-
-const BASE = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8011";
 
 interface Props {
   product: Product;
@@ -11,7 +10,7 @@ interface Props {
 
 export default function ProductCard({ product }: Props) {
   const imgSrc =
-    product.images?.[0] ? `${BASE}${product.images[0]}` : null;
+    product.images?.[0] ? `${API_BASE_URL}${product.images[0]}` : null;
 
   return (
     <Link

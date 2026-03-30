@@ -5,12 +5,10 @@
 import { useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import Image from "next/image";
-import { apiFetch } from "@/lib/api";
+import { API_BASE_URL, apiFetch } from "@/lib/api";
 import { Product } from "@/lib/types";
 import { addToCart } from "@/lib/cart";
 import { showToast } from "@/components/Toast";
-
-const BASE = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8011";
 
 export default function ProductDetailPage() {
   const { id } = useParams<{ id: string }>();
@@ -53,7 +51,7 @@ export default function ProductDetailPage() {
           <div className="aspect-square bg-gray-100 rounded-lg overflow-hidden relative">
             {product.images?.[activeImg] ? (
               <Image
-                src={`${BASE}${product.images[activeImg]}`}
+                src={`${API_BASE_URL}${product.images[activeImg]}`}
                 alt={product.title}
                 fill
                 className="object-cover"
@@ -72,7 +70,7 @@ export default function ProductDetailPage() {
                   className={`w-14 h-14 rounded border-2 overflow-hidden relative ${i === activeImg ? "border-orange-500" : "border-gray-200"}`}
                 >
                   <Image
-                    src={`${BASE}${img}`}
+                    src={`${API_BASE_URL}${img}`}
                     alt={`Image ${i + 1}`}
                     fill
                     className="object-cover"

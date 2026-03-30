@@ -7,10 +7,17 @@ from .models import Category, Product
 class CategoryAdmin(admin.ModelAdmin):
     list_display = ("id", "name")
     search_fields = ("name",)
+    ordering = ("-id",)
 
 
 @admin.register(Product)
 class ProductAdmin(admin.ModelAdmin):
-    list_display = ("id", "title", "price", "stock", "seller", "category")
+    list_display = ("id", "name", "price", "category", "seller", "stock")
+    search_fields = ("title",)
     list_filter = ("category",)
-    search_fields = ("title", "description")
+    ordering = ("-id",)
+    list_select_related = ("category", "seller")
+
+    @admin.display(ordering="title", description="Name")
+    def name(self, obj):
+        return obj.title

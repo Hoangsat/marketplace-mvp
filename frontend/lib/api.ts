@@ -1,7 +1,8 @@
 // lib/api.ts
 // Typed fetch wrapper that prepends API base URL and attaches JWT automatically.
 
-const BASE = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8011";
+export const API_BASE_URL =
+  process.env.NEXT_PUBLIC_API_URL ?? "http://127.0.0.1:8000";
 
 function getToken(): string | null {
   if (typeof window === "undefined") return null;
@@ -27,7 +28,7 @@ export async function apiFetch<T>(
     headers["Content-Type"] = "application/json";
   }
 
-  const res = await fetch(`${BASE}${path}`, { ...options, headers });
+  const res = await fetch(`${API_BASE_URL}${path}`, { ...options, headers });
 
   if (!res.ok) {
     let message = `API error ${res.status}`;
