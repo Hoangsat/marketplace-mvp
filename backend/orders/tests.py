@@ -1,14 +1,17 @@
 from decimal import Decimal
 
+from django.contrib.admin.sites import AdminSite
 from django.test import TestCase, override_settings
+from django.test.client import RequestFactory
 from rest_framework import status
 from rest_framework.test import APIClient
 
 from accounts.models import User
 from catalog.models import Category, Product
-from orders.models import Order, OrderItem
+from orders.admin import OrderAdmin
+from orders.models import Order, OrderItem, SellerTransaction
 from orders.serializers import OrderSerializer
-from orders.services import create_checkout_order
+from orders.services import create_checkout_order, mark_order_delivered
 
 
 class CheckoutFlowTests(TestCase):
@@ -148,4 +151,74 @@ class OrderHistorySnapshotTests(TestCase):
                 "account_number": "123456789",
                 "note": "Use the order reference as the memo.",
             },
+        )
+
+
+class DeliveredOrderSellerTransactionTests(TestCase):
+    def setUp(self):
+        self.buyer = User.objects.create_user(
+            email="buyer@example.com",
+            password="password123",
+            is_seller=False,
+        )
+        self.seller = User.objects.create_user(
+            email="seller@example.com",
+            password="password123",
+        )
+        self.staff_user = User.objects.create_user(
+            email="admin@example.com",
+            password="password123",
+            is_staff=True,
+        )
+        self.category, _ = Category.objects.get_or_create(name="Games")
+        self.product = Product.objects.create(
+            title="Delivered Product",
+            description="Product for delivery tests",
+            price=Decimal("30.00"),
+            stock=2,
+            seller=self.seller,
+            category=self.category,
+        )
+        self.order = Order.objects.create(
+            buyer=self.buyer,
+            total=Decimal("30.00"),
+            status=Order.Status.PAID,
+            payment_method="manual_bank",
+        )
+        OrderItem.objects.create(
+            order=self.order,
+            product=self.product,
+            quantity=1,
+            price_at_purchase=Decimal("30.00"),
+            product_title_snapshot=self.product.title,
+            product_image_snapshot="",
+        )
+        self.seller_transaction = SellerTransaction.objects.create(
+            seller=self.seller,
+            order=self.order,
+            amount=Decimal("30.00"),
+            status=SellerTransaction.Status.HOLD,
+        )
+
+    def test_mark_order_delivered_makes_hold_transactions_available(self):
+        mark_order_delivered(order_id=self.order.id, current_user=self.seller)
+
+        self.seller_transaction.refresh_from_db()
+        self.assertEqual(
+            self.seller_transaction.status,
+            SellerTransaction.Status.AVAILABLE,
+        )
+
+    def test_admin_mark_as_shipped_makes_hold_transactions_available(self):
+        order_admin = OrderAdmin(Order, AdminSite())
+        order_admin.message_user = lambda *args, **kwargs: None
+        request = RequestFactory().post("/admin/orders/order/")
+        request.user = self.staff_user
+
+        order_admin.mark_as_shipped(request, Order.objects.filter(id=self.order.id))
+
+        self.seller_transaction.refresh_from_db()
+        self.assertEqual(
+            self.seller_transaction.status,
+            SellerTransaction.Status.AVAILABLE,
         )

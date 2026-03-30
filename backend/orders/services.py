@@ -316,6 +316,7 @@ def mark_order_delivered(*, order_id, current_user):
         order.status = Order.Status.DELIVERED
         order.delivered_at = timezone.now()
         order.save(update_fields=["status", "delivered_at"])
+        make_hold_seller_transactions_available(order)
 
     return _get_order_with_related(order_id)
 
@@ -384,3 +385,12 @@ def _get_seller_amounts(order):
             }
         seller_amounts[seller_id]["amount"] += line_total
     return seller_amounts
+
+
+def make_hold_seller_transactions_available(order):
+    seller_transactions = order.seller_transactions.filter(
+        status=SellerTransaction.Status.HOLD
+    )
+    for seller_transaction in seller_transactions:
+        seller_transaction.status = SellerTransaction.Status.AVAILABLE
+        seller_transaction.save(update_fields=["status", "updated_at"])

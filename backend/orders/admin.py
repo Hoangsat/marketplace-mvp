@@ -7,6 +7,7 @@ from django.utils import timezone
 from .services import (
     OrderFlowError,
     confirm_order_payment,
+    make_hold_seller_transactions_available,
     mark_seller_transaction_paid_out,
     release_order_funds,
 )
@@ -64,10 +65,16 @@ class OrderAdmin(admin.ModelAdmin):
 
     @admin.action(description="Mark selected orders as shipped")
     def mark_as_shipped(self, request, queryset):
-        updated_count = queryset.filter(status=Order.Status.PAID).update(
-            status=Order.Status.DELIVERED,
-            delivered_at=timezone.now(),
-        )
+        paid_orders = list(queryset.filter(status=Order.Status.PAID))
+        delivered_at = timezone.now()
+
+        for order in paid_orders:
+            order.status = Order.Status.DELIVERED
+            order.delivered_at = delivered_at
+            order.save(update_fields=["status", "delivered_at"])
+            make_hold_seller_transactions_available(order)
+
+        updated_count = len(paid_orders)
         if updated_count:
             self.message_user(
                 request,
