@@ -2,16 +2,19 @@
 
 // app/cart/page.tsx — Cart view with quantity edit and remove
 
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import Link from "next/link";
+import { useLanguage } from "@/components/LanguageProvider";
 import { CartItem, getCart, removeFromCart, updateQuantity, cartTotal } from "@/lib/cart";
 
 export default function CartPage() {
-  const [cart, setCart] = useState<CartItem[]>([]);
-
-  useEffect(() => {
-    setCart(getCart());
-  }, []);
+  const { messages } = useLanguage();
+  const [cart, setCart] = useState<CartItem[]>(() => {
+    if (typeof window === "undefined") {
+      return [];
+    }
+    return getCart();
+  });
 
   function refresh() {
     const updated = getCart();
@@ -33,15 +36,17 @@ export default function CartPage() {
   if (cart.length === 0) {
     return (
       <div className="text-center mt-16">
-        <p className="text-gray-500 text-lg mb-4">Your cart is empty.</p>
-        <Link href="/" className="text-orange-600 hover:underline">Browse products</Link>
+        <p className="text-gray-500 text-lg mb-4">{messages.cartEmpty}</p>
+        <Link href="/" className="text-orange-600 hover:underline">
+          {messages.browseProductsLink}
+        </Link>
       </div>
     );
   }
 
   return (
     <div className="max-w-2xl mx-auto">
-      <h1 className="text-2xl font-bold mb-6">Your Cart</h1>
+      <h1 className="text-2xl font-bold mb-6">{messages.cartTitle}</h1>
       <div className="space-y-4">
         {cart.map((item) => (
           <div key={item.product_id} className="flex items-center gap-4 bg-white border border-gray-200 rounded-lg p-4">
@@ -50,7 +55,9 @@ export default function CartPage() {
             </div>
             <div className="flex-1 min-w-0">
               <p className="font-medium text-sm truncate">{item.title}</p>
-              <p className="text-orange-600 text-sm">${item.price.toFixed(2)} each</p>
+              <p className="text-orange-600 text-sm">
+                ${item.price.toFixed(2)} {messages.each}
+              </p>
             </div>
             <div className="flex items-center gap-2 shrink-0">
               <input
@@ -64,7 +71,7 @@ export default function CartPage() {
                 onClick={() => handleRemove(item.product_id)}
                 className="text-red-500 hover:text-red-700 text-sm"
               >
-                Remove
+                {messages.remove}
               </button>
             </div>
           </div>
@@ -73,14 +80,14 @@ export default function CartPage() {
 
       <div className="mt-6 bg-white border border-gray-200 rounded-lg p-4 flex items-center justify-between">
         <div>
-          <p className="text-sm text-gray-500">Total</p>
+          <p className="text-sm text-gray-500">{messages.total}</p>
           <p className="text-xl font-bold text-orange-600">${cartTotal(cart).toFixed(2)}</p>
         </div>
         <Link
           href="/checkout"
           className="bg-orange-600 text-white px-6 py-2 rounded font-medium hover:bg-orange-700"
         >
-          Checkout
+          {messages.checkout}
         </Link>
       </div>
     </div>

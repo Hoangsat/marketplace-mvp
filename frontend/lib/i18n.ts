@@ -13,6 +13,7 @@ export interface TranslationMessages {
   logout: string;
   cart: string;
   browseProducts: string;
+  browseProductsLink: string;
   searchProducts: string;
   allCategories: string;
   minPrice: string;
@@ -47,6 +48,80 @@ export interface TranslationMessages {
   registrationFailed: string;
   loggedIn: string;
   loginFailed: string;
+  cartTitle: string;
+  cartEmpty: string;
+  remove: string;
+  total: string;
+  checkout: string;
+  each: string;
+  pleaseLoginToCheckout: string;
+  cartIsEmpty: string;
+  nothingToCheckout: string;
+  orderPlacedContinuePayment: string;
+  checkoutFailed: string;
+  manualBankTransferRedirect: string;
+  processing: string;
+  continueToPayment: string;
+  myOrders: string;
+  loadingOrders: string;
+  noOrdersYet: string;
+  completePayment: string;
+  paymentEvaluating: string;
+  markAsCompleted: string;
+  unableToUpdateOrder: string;
+  orderPrefix: string;
+  productFallback: string;
+  loadingPaymentDetails: string;
+  orderNotFound: string;
+  completePaymentTitle: string;
+  bankTransferInstructions: string;
+  transferExactAmount: string;
+  toFollowingBankAccount: string;
+  bankLabel: string;
+  accountNameLabel: string;
+  accountNumberLabel: string;
+  memoLabel: string;
+  exactMemoWarning: string;
+  paymentSubmitted: string;
+  failedToLoadOrder: string;
+  failedToSubmit: string;
+  paymentConfirmedPreparingOrder: string;
+  viewMyOrders: string;
+  markedPaidOn: string;
+  awaitingManualConfirmation: string;
+  returnToOrders: string;
+  submitting: string;
+  iHavePaid: string;
+  loading: string;
+  sellerDashboardTitle: string;
+  pendingBalanceOnHold: string;
+  availableBalance: string;
+  noSellerOrders: string;
+  orderStatusLabel: string;
+  moneyStatusLabel: string;
+  markAsDelivered: string;
+  orderMarkedDelivered: string;
+  unableToLoadSellerDashboard: string;
+  unableToUpdateOrderStatus: string;
+  myProducts: string;
+  newProduct: string;
+  noSellerProducts: string;
+  edit: string;
+  delete: string;
+  deleteProductConfirm: string;
+  productDeleted: string;
+  deleteFailed: string;
+  viewOrderItems: string;
+  salesOrderItems: string;
+  quantityShort: string;
+  statusPending: string;
+  statusPaid: string;
+  statusDelivered: string;
+  statusCompleted: string;
+  statusCancelled: string;
+  statusOnHold: string;
+  statusAvailable: string;
+  statusPendingPayment: string;
   outOfStock: string;
   inStock: (count: number) => string;
 }
@@ -62,6 +137,7 @@ export const translations: Record<Language, TranslationMessages> = {
     logout: "Đăng xuất",
     cart: "Giỏ hàng",
     browseProducts: "Duyệt sản phẩm",
+    browseProductsLink: "Duyệt sản phẩm",
     searchProducts: "Tìm sản phẩm...",
     allCategories: "Tất cả danh mục",
     minPrice: "Giá từ",
@@ -96,6 +172,86 @@ export const translations: Record<Language, TranslationMessages> = {
     registrationFailed: "Đăng ký thất bại",
     loggedIn: "Đăng nhập thành công!",
     loginFailed: "Đăng nhập thất bại",
+    cartTitle: "Giỏ hàng của bạn",
+    cartEmpty: "Giỏ hàng của bạn đang trống.",
+    remove: "Xóa",
+    total: "Tổng cộng",
+    checkout: "Thanh toán",
+    each: "mỗi món",
+    pleaseLoginToCheckout: "Vui lòng đăng nhập để thanh toán.",
+    cartIsEmpty: "Giỏ hàng đang trống.",
+    nothingToCheckout: "Không có gì để thanh toán.",
+    orderPlacedContinuePayment:
+      "Đã tạo đơn hàng! Vui lòng hoàn tất thanh toán.",
+    checkoutFailed: "Thanh toán thất bại",
+    manualBankTransferRedirect:
+      "Bạn sẽ được chuyển đến trang hướng dẫn chuyển khoản ngân hàng thủ công.",
+    processing: "Đang xử lý...",
+    continueToPayment: "Tiếp tục thanh toán",
+    myOrders: "Đơn hàng của tôi",
+    loadingOrders: "Đang tải đơn hàng...",
+    noOrdersYet: "Bạn chưa đặt đơn hàng nào.",
+    completePayment: "Hoàn tất thanh toán",
+    paymentEvaluating: "Thanh toán đang được kiểm tra...",
+    markAsCompleted: "Đánh dấu hoàn tất",
+    unableToUpdateOrder: "Không thể cập nhật đơn hàng",
+    orderPrefix: "Đơn hàng",
+    productFallback: "Sản phẩm",
+    loadingPaymentDetails: "Đang tải thông tin thanh toán...",
+    orderNotFound: "Không tìm thấy đơn hàng.",
+    completePaymentTitle: "Hoàn tất thanh toán",
+    bankTransferInstructions: "Hướng dẫn chuyển khoản ngân hàng",
+    transferExactAmount: "Vui lòng chuyển chính xác",
+    toFollowingBankAccount: "đến tài khoản ngân hàng sau:",
+    bankLabel: "Ngân hàng",
+    accountNameLabel: "Tên tài khoản",
+    accountNumberLabel: "Số tài khoản",
+    memoLabel: "Nội dung",
+    exactMemoWarning:
+      "* Bạn phải nhập đúng nội dung ở trên để chúng tôi nhận diện thanh toán.",
+    paymentSubmitted: "Đã gửi xác nhận thanh toán.",
+    failedToLoadOrder: "Không thể tải đơn hàng",
+    failedToSubmit: "Không thể gửi xác nhận",
+    paymentConfirmedPreparingOrder:
+      "Thanh toán đã được xác nhận! Chúng tôi đang chuẩn bị đơn hàng của bạn.",
+    viewMyOrders: "Xem đơn hàng của tôi",
+    markedPaidOn: "Bạn đã đánh dấu đã thanh toán vào",
+    awaitingManualConfirmation:
+      "Đơn hàng chỉ được chuyển sang đã thanh toán sau khi quản trị viên xác nhận thủ công.",
+    returnToOrders: "Quay lại đơn hàng",
+    submitting: "Đang gửi...",
+    iHavePaid: "Tôi đã thanh toán",
+    loading: "Đang tải...",
+    sellerDashboardTitle: "Bảng điều khiển người bán",
+    pendingBalanceOnHold: "Số dư chờ xử lý (Đang giữ)",
+    availableBalance: "Số dư khả dụng",
+    noSellerOrders: "Chưa có đơn hàng nào cho sản phẩm của bạn.",
+    orderStatusLabel: "Trạng thái đơn hàng",
+    moneyStatusLabel: "Trạng thái tiền",
+    markAsDelivered: "Đánh dấu đã giao",
+    orderMarkedDelivered: "Đơn hàng đã được đánh dấu là đã giao",
+    unableToLoadSellerDashboard:
+      "Không thể tải bảng điều khiển người bán",
+    unableToUpdateOrderStatus: "Không thể cập nhật trạng thái đơn hàng",
+    myProducts: "Sản phẩm của tôi",
+    newProduct: "+ Sản phẩm mới",
+    noSellerProducts: "Bạn chưa đăng bán sản phẩm nào.",
+    edit: "Sửa",
+    delete: "Xóa",
+    deleteProductConfirm: "Xóa sản phẩm này?",
+    productDeleted: "Đã xóa sản phẩm",
+    deleteFailed: "Xóa thất bại",
+    viewOrderItems: "Xem mục đơn hàng cho sản phẩm của tôi",
+    salesOrderItems: "Đơn bán (mục đơn hàng)",
+    quantityShort: "SL",
+    statusPending: "Chờ thanh toán",
+    statusPaid: "Đã thanh toán",
+    statusDelivered: "Đã giao",
+    statusCompleted: "Hoàn tất",
+    statusCancelled: "Đã hủy",
+    statusOnHold: "Đang giữ",
+    statusAvailable: "Khả dụng",
+    statusPendingPayment: "Chờ thanh toán",
     outOfStock: "Hết hàng",
     inStock: (count) => `${count} còn hàng`,
   },
@@ -109,6 +265,7 @@ export const translations: Record<Language, TranslationMessages> = {
     logout: "Logout",
     cart: "Cart",
     browseProducts: "Browse Products",
+    browseProductsLink: "Browse products",
     searchProducts: "Search products...",
     allCategories: "All Categories",
     minPrice: "Min $",
@@ -143,10 +300,116 @@ export const translations: Record<Language, TranslationMessages> = {
     registrationFailed: "Registration failed",
     loggedIn: "Logged in!",
     loginFailed: "Login failed",
+    cartTitle: "Your Cart",
+    cartEmpty: "Your cart is empty.",
+    remove: "Remove",
+    total: "Total",
+    checkout: "Checkout",
+    each: "each",
+    pleaseLoginToCheckout: "Please log in to checkout.",
+    cartIsEmpty: "Cart is empty.",
+    nothingToCheckout: "Nothing to checkout.",
+    orderPlacedContinuePayment:
+      "Order placed! Please complete payment.",
+    checkoutFailed: "Checkout failed",
+    manualBankTransferRedirect:
+      "You will be redirected to the manual bank transfer payment page.",
+    processing: "Processing...",
+    continueToPayment: "Continue to Payment",
+    myOrders: "My Orders",
+    loadingOrders: "Loading orders...",
+    noOrdersYet: "You haven't placed any orders yet.",
+    completePayment: "Complete Payment",
+    paymentEvaluating: "Payment evaluating...",
+    markAsCompleted: "Mark as Completed",
+    unableToUpdateOrder: "Unable to update order",
+    orderPrefix: "Order",
+    productFallback: "Product",
+    loadingPaymentDetails: "Loading payment details...",
+    orderNotFound: "Order not found.",
+    completePaymentTitle: "Complete Payment",
+    bankTransferInstructions: "Bank Transfer Instructions",
+    transferExactAmount: "Please transfer exactly",
+    toFollowingBankAccount: "to the following bank account:",
+    bankLabel: "Bank",
+    accountNameLabel: "Account Name",
+    accountNumberLabel: "Account Number",
+    memoLabel: "Memo",
+    exactMemoWarning:
+      "* Warning: You must include the exact memo above so we can identify your payment.",
+    paymentSubmitted: "Payment submitted for confirmation.",
+    failedToLoadOrder: "Failed to load order",
+    failedToSubmit: "Failed to submit",
+    paymentConfirmedPreparingOrder:
+      "Payment has been confirmed! We are preparing your order.",
+    viewMyOrders: "View My Orders",
+    markedPaidOn: "You marked this as paid on",
+    awaitingManualConfirmation:
+      "Order will be marked paid only after manual confirmation from our admins.",
+    returnToOrders: "Return to Orders",
+    submitting: "Submitting...",
+    iHavePaid: "I have paid",
+    loading: "Loading...",
+    sellerDashboardTitle: "Seller Dashboard",
+    pendingBalanceOnHold: "Pending Balance (On Hold)",
+    availableBalance: "Available Balance",
+    noSellerOrders: "No orders yet for your products.",
+    orderStatusLabel: "Order Status",
+    moneyStatusLabel: "Money Status",
+    markAsDelivered: "Mark as Delivered",
+    orderMarkedDelivered: "Order marked as delivered",
+    unableToLoadSellerDashboard: "Unable to load seller dashboard",
+    unableToUpdateOrderStatus: "Unable to update order status",
+    myProducts: "My Products",
+    newProduct: "+ New Product",
+    noSellerProducts: "You haven't listed any products yet.",
+    edit: "Edit",
+    delete: "Delete",
+    deleteProductConfirm: "Delete this product?",
+    productDeleted: "Product deleted",
+    deleteFailed: "Delete failed",
+    viewOrderItems: "View order items for my products",
+    salesOrderItems: "Sales (Order Items)",
+    quantityShort: "qty",
+    statusPending: "Pending",
+    statusPaid: "Paid",
+    statusDelivered: "Delivered",
+    statusCompleted: "Completed",
+    statusCancelled: "Cancelled",
+    statusOnHold: "On Hold",
+    statusAvailable: "Available",
+    statusPendingPayment: "Pending Payment",
     outOfStock: "Out of stock",
     inStock: (count) => `${count} in stock`,
   },
 };
+
+function formatFallbackLabel(value: string) {
+  return value.replace("_", " ").replace(/\b\w/g, (char) => char.toUpperCase());
+}
+
+export function getOrderStatusLabel(
+  messages: TranslationMessages,
+  status: string
+) {
+  if (status === "pending") return messages.statusPending;
+  if (status === "paid") return messages.statusPaid;
+  if (status === "delivered") return messages.statusDelivered;
+  if (status === "completed") return messages.statusCompleted;
+  if (status === "cancelled") return messages.statusCancelled;
+  return formatFallbackLabel(status);
+}
+
+export function getMoneyStatusLabel(
+  messages: TranslationMessages,
+  status: string
+) {
+  if (status === "on_hold") return messages.statusOnHold;
+  if (status === "available") return messages.statusAvailable;
+  if (status === "cancelled") return messages.statusCancelled;
+  if (status === "pending_payment") return messages.statusPendingPayment;
+  return formatFallbackLabel(status);
+}
 
 export function isLanguage(value: string | null): value is Language {
   return value === "vi" || value === "en";
