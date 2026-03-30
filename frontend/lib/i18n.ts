@@ -114,6 +114,31 @@ export interface TranslationMessages {
   viewOrderItems: string;
   salesOrderItems: string;
   quantityShort: string;
+  productNotFound: string;
+  back: string;
+  categoryLabel: string;
+  stockLabel: string;
+  quantity: string;
+  addToCart: string;
+  addedToCart: string;
+  createProductTitle: string;
+  editProductTitle: string;
+  titleLabel: string;
+  descriptionLabel: string;
+  priceLabel: string;
+  stockFieldLabel: string;
+  selectCategory: string;
+  imagesLabel: string;
+  replaceImagesLabel: string;
+  replaceImagesHelp: string;
+  creating: string;
+  saving: string;
+  saveChanges: string;
+  cancel: string;
+  productCreated: string;
+  productUpdated: string;
+  createProductFailed: string;
+  updateFailed: string;
   statusPending: string;
   statusPaid: string;
   statusDelivered: string;
@@ -244,6 +269,32 @@ export const translations: Record<Language, TranslationMessages> = {
     viewOrderItems: "Xem mục đơn hàng cho sản phẩm của tôi",
     salesOrderItems: "Đơn bán (mục đơn hàng)",
     quantityShort: "SL",
+    productNotFound: "Không tìm thấy sản phẩm.",
+    back: "Quay lại",
+    categoryLabel: "Danh mục",
+    stockLabel: "Tồn kho",
+    quantity: "Số lượng",
+    addToCart: "Thêm vào giỏ",
+    addedToCart: "Đã thêm vào giỏ!",
+    createProductTitle: "Tạo sản phẩm",
+    editProductTitle: "Chỉnh sửa sản phẩm",
+    titleLabel: "Tiêu đề",
+    descriptionLabel: "Mô tả",
+    priceLabel: "Giá ($)",
+    stockFieldLabel: "Kho",
+    selectCategory: "Chọn danh mục",
+    imagesLabel: "Hình ảnh (tối đa 5, jpg/png, mỗi ảnh tối đa 5MB)",
+    replaceImagesLabel: "Thay hình ảnh (tùy chọn)",
+    replaceImagesHelp:
+      "Tải lên hình ảnh mới sẽ thay thế toàn bộ hình ảnh hiện tại.",
+    creating: "Đang tạo...",
+    saving: "Đang lưu...",
+    saveChanges: "Lưu thay đổi",
+    cancel: "Hủy",
+    productCreated: "Tạo sản phẩm thành công!",
+    productUpdated: "Cập nhật sản phẩm thành công!",
+    createProductFailed: "Không thể tạo sản phẩm",
+    updateFailed: "Cập nhật thất bại",
     statusPending: "Chờ thanh toán",
     statusPaid: "Đã thanh toán",
     statusDelivered: "Đã giao",
@@ -371,6 +422,32 @@ export const translations: Record<Language, TranslationMessages> = {
     viewOrderItems: "View order items for my products",
     salesOrderItems: "Sales (Order Items)",
     quantityShort: "qty",
+    productNotFound: "Product not found.",
+    back: "Back",
+    categoryLabel: "Category",
+    stockLabel: "Stock",
+    quantity: "Qty",
+    addToCart: "Add to Cart",
+    addedToCart: "Added to cart!",
+    createProductTitle: "Create Product",
+    editProductTitle: "Edit Product",
+    titleLabel: "Title",
+    descriptionLabel: "Description",
+    priceLabel: "Price ($)",
+    stockFieldLabel: "Stock",
+    selectCategory: "Select category",
+    imagesLabel: "Images (up to 5, jpg/png, max 5MB each)",
+    replaceImagesLabel: "Replace Images (optional)",
+    replaceImagesHelp:
+      "Uploading new images will replace all existing ones.",
+    creating: "Creating...",
+    saving: "Saving...",
+    saveChanges: "Save Changes",
+    cancel: "Cancel",
+    productCreated: "Product created!",
+    productUpdated: "Product updated!",
+    createProductFailed: "Failed to create product",
+    updateFailed: "Update failed",
     statusPending: "Pending",
     statusPaid: "Paid",
     statusDelivered: "Delivered",
