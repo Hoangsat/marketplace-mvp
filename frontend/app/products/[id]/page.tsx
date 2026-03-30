@@ -7,8 +7,9 @@ import { useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { useLanguage } from "@/components/LanguageProvider";
 import { showToast } from "@/components/Toast";
-import { API_BASE_URL, apiFetch } from "@/lib/api";
+import { apiFetch } from "@/lib/api";
 import { addToCart } from "@/lib/cart";
+import { resolveMediaUrl } from "@/lib/media";
 import { Product } from "@/lib/types";
 
 export default function ProductDetailPage() {
@@ -40,6 +41,7 @@ export default function ProductDetailPage() {
         title: product.title,
         price: product.price,
         image: product.images?.[0] ?? null,
+        seller_id: product.seller_id,
       },
       qty
     );
@@ -55,6 +57,8 @@ export default function ProductDetailPage() {
     return <p className="text-gray-500">{messages.productNotFound}</p>;
   }
 
+  const activeImageUrl = resolveMediaUrl(product.images?.[activeImg]);
+
   return (
     <div className="max-w-4xl mx-auto">
       <button
@@ -67,9 +71,9 @@ export default function ProductDetailPage() {
       <div className="grid md:grid-cols-2 gap-8">
         <div>
           <div className="aspect-square bg-gray-100 rounded-lg overflow-hidden relative">
-            {product.images?.[activeImg] ? (
+            {activeImageUrl ? (
               <Image
-                src={`${API_BASE_URL}${product.images[activeImg]}`}
+                src={activeImageUrl}
                 alt={product.title}
                 fill
                 className="object-cover"
@@ -92,7 +96,7 @@ export default function ProductDetailPage() {
                   }`}
                 >
                   <Image
-                    src={`${API_BASE_URL}${img}`}
+                    src={resolveMediaUrl(img) ?? ""}
                     alt={`Image ${index + 1}`}
                     fill
                     className="object-cover"

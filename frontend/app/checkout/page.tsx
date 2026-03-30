@@ -9,7 +9,13 @@ import { useLanguage } from "@/components/LanguageProvider";
 import { showToast } from "@/components/Toast";
 import { apiFetch } from "@/lib/api";
 import { getToken } from "@/lib/auth";
-import { CartItem, cartTotal, clearCart, getCart } from "@/lib/cart";
+import {
+  CartItem,
+  cartTotal,
+  clearCart,
+  getCart,
+  hasMultipleCartSellers,
+} from "@/lib/cart";
 import { Order } from "@/lib/types";
 
 export default function CheckoutPage() {
@@ -17,6 +23,7 @@ export default function CheckoutPage() {
   const { messages } = useLanguage();
   const [cart, setCart] = useState<CartItem[]>([]);
   const [loading, setLoading] = useState(false);
+  const hasMultipleSellers = hasMultipleCartSellers(cart);
 
   useEffect(() => {
     setCart(getCart());
@@ -31,6 +38,11 @@ export default function CheckoutPage() {
 
     if (cart.length === 0) {
       showToast(messages.cartIsEmpty, "error");
+      return;
+    }
+
+    if (hasMultipleSellers) {
+      showToast(messages.singleSellerCheckoutMessage, "error");
       return;
     }
 
@@ -99,10 +111,16 @@ export default function CheckoutPage() {
         {messages.manualBankTransferRedirect}
       </div>
 
+      {hasMultipleSellers && (
+        <div className="bg-red-50 border border-red-200 rounded-lg p-4 text-sm text-red-700 mb-6">
+          {messages.singleSellerCheckoutMessage}
+        </div>
+      )}
+
       <button
         onClick={handleCheckout}
-        disabled={loading}
-        className="w-full bg-orange-600 text-white py-3 rounded font-semibold hover:bg-orange-700 disabled:opacity-50"
+        disabled={loading || hasMultipleSellers}
+        className="w-full bg-orange-600 text-white py-3 rounded font-semibold hover:bg-orange-700 disabled:opacity-50 disabled:cursor-not-allowed"
       >
         {loading ? messages.processing : messages.continueToPayment}
       </button>

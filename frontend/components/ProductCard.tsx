@@ -3,8 +3,8 @@
 // components/ProductCard.tsx
 import Link from "next/link";
 import Image from "next/image";
-import { API_BASE_URL } from "@/lib/api";
 import { useLanguage } from "@/components/LanguageProvider";
+import { resolveMediaUrl } from "@/lib/media";
 import { Product } from "@/lib/types";
 
 interface Props {
@@ -13,8 +13,7 @@ interface Props {
 
 export default function ProductCard({ product }: Props) {
   const { messages } = useLanguage();
-  const imgSrc =
-    product.images?.[0] ? `${API_BASE_URL}${product.images[0]}` : null;
+  const imgSrc = resolveMediaUrl(product.images?.[0]);
 
   return (
     <Link

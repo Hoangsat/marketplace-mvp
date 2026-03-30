@@ -43,9 +43,11 @@ class Order(models.Model):
 class OrderItem(models.Model):
     id = models.AutoField(primary_key=True)
     order = models.ForeignKey(Order, on_delete=models.CASCADE, related_name="items")
-    product = models.ForeignKey(Product, on_delete=models.CASCADE, related_name="order_items")
+    product = models.ForeignKey(Product, on_delete=models.PROTECT, related_name="order_items")
     quantity = models.IntegerField()
     price_at_purchase = models.DecimalField(max_digits=12, decimal_places=2)
+    product_title_snapshot = models.CharField(max_length=255, blank=True)
+    product_image_snapshot = models.CharField(max_length=500, blank=True)
 
     class Meta:
         db_table = "order_items"

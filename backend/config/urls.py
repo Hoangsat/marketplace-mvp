@@ -23,5 +23,5 @@ urlpatterns = [
     path("", include("orders.urls")),
 ]
 
-if settings.DEBUG:
+if settings.DEBUG and settings.MEDIA_STORAGE_BACKEND == "filesystem":
     urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)

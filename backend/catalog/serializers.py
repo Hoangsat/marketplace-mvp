@@ -1,5 +1,7 @@
 from rest_framework import serializers
 
+from common.media import normalize_media_urls
+
 from .models import Category, Game, OfferType, Product
 
 
@@ -23,10 +25,7 @@ class OfferTypeSerializer(serializers.ModelSerializer):
 
 class ProductSerializer(serializers.ModelSerializer):
     price = serializers.FloatField(read_only=True)
-    images = serializers.ListField(
-        child=serializers.CharField(),
-        read_only=True,
-    )
+    images = serializers.SerializerMethodField()
     seller_id = serializers.IntegerField(read_only=True)
     category_id = serializers.IntegerField(read_only=True)
     category = CategorySerializer(read_only=True)
@@ -44,6 +43,10 @@ class ProductSerializer(serializers.ModelSerializer):
             "category_id",
             "category",
         )
+
+    def get_images(self, obj):
+        request = self.context.get("request")
+        return normalize_media_urls(obj.images or [], request=request)
 
 
 class ProductCreateSerializer(serializers.Serializer):

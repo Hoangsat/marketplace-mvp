@@ -47,7 +47,10 @@ class CheckoutView(APIView):
         except OrderFlowError as exc:
             return Response({"detail": str(exc.detail)}, status=exc.status_code)
 
-        return Response(OrderSerializer(order).data, status=status.HTTP_201_CREATED)
+        return Response(
+            OrderSerializer(order, context={"request": request}).data,
+            status=status.HTTP_201_CREATED,
+        )
 
 
 class BuyerOrderListView(APIView):
@@ -60,7 +63,9 @@ class BuyerOrderListView(APIView):
             .select_related("buyer")
             .order_by("-created_at")
         )
-        return Response(OrderSerializer(orders, many=True).data)
+        return Response(
+            OrderSerializer(orders, many=True, context={"request": request}).data
+        )
 
 
 class SellerOrderItemListView(APIView):
@@ -83,7 +88,13 @@ class SellerOrderItemListView(APIView):
             item.seller_amount = item.price_at_purchase * item.quantity
             item.order_status = item.order.status
             item.payout_status = _get_payout_status(item.order, seller_transaction)
-        return Response(SellerOrderItemSerializer(items, many=True).data)
+        return Response(
+            SellerOrderItemSerializer(
+                items,
+                many=True,
+                context={"request": request},
+            ).data
+        )
 
 
 class SellerDashboardView(APIView):
@@ -159,7 +170,7 @@ class OrderDetailView(APIView):
             order = get_order_for_user(order_id=order_id, current_user=request.user)
         except OrderFlowError as exc:
             return Response({"detail": str(exc.detail)}, status=exc.status_code)
-        return Response(OrderSerializer(order).data)
+        return Response(OrderSerializer(order, context={"request": request}).data)
 
 
 class MarkPaymentSubmittedView(APIView):
@@ -170,7 +181,7 @@ class MarkPaymentSubmittedView(APIView):
             order = mark_payment_submitted(order_id=order_id, current_user=request.user)
         except OrderFlowError as exc:
             return Response({"detail": str(exc.detail)}, status=exc.status_code)
-        return Response(OrderSerializer(order).data)
+        return Response(OrderSerializer(order, context={"request": request}).data)
 
 
 class AdminConfirmPaymentView(APIView):
@@ -181,7 +192,7 @@ class AdminConfirmPaymentView(APIView):
             order = confirm_order_payment(order_id=order_id)
         except OrderFlowError as exc:
             return Response({"detail": str(exc.detail)}, status=exc.status_code)
-        return Response(OrderSerializer(order).data)
+        return Response(OrderSerializer(order, context={"request": request}).data)
 
 
 class ConfirmPaymentView(APIView):
@@ -192,7 +203,7 @@ class ConfirmPaymentView(APIView):
             order = mark_payment_submitted(order_id=order_id, current_user=request.user)
         except OrderFlowError as exc:
             return Response({"detail": str(exc.detail)}, status=exc.status_code)
-        return Response(OrderSerializer(order).data)
+        return Response(OrderSerializer(order, context={"request": request}).data)
 
 
 class MarkDeliveredView(APIView):
@@ -203,7 +214,7 @@ class MarkDeliveredView(APIView):
             order = mark_order_delivered(order_id=order_id, current_user=request.user)
         except OrderFlowError as exc:
             return Response({"detail": str(exc.detail)}, status=exc.status_code)
-        return Response(OrderSerializer(order).data)
+        return Response(OrderSerializer(order, context={"request": request}).data)
 
 
 class MarkCompletedView(APIView):
@@ -214,7 +225,7 @@ class MarkCompletedView(APIView):
             order = mark_order_completed(order_id=order_id, current_user=request.user)
         except OrderFlowError as exc:
             return Response({"detail": str(exc.detail)}, status=exc.status_code)
-        return Response(OrderSerializer(order).data)
+        return Response(OrderSerializer(order, context={"request": request}).data)
 
 
 class AdminCancelOrderView(APIView):
@@ -225,7 +236,7 @@ class AdminCancelOrderView(APIView):
             order = cancel_order(order_id=order_id)
         except OrderFlowError as exc:
             return Response({"detail": str(exc.detail)}, status=exc.status_code)
-        return Response(OrderSerializer(order).data)
+        return Response(OrderSerializer(order, context={"request": request}).data)
 
 
 def _get_payout_status(order, seller_transaction):

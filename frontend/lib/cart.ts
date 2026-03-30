@@ -7,6 +7,7 @@ export interface CartItem {
   price: number;
   quantity: number;
   image: string | null;
+  seller_id?: number;
 }
 
 const KEY = "cart";
@@ -52,4 +53,13 @@ export function clearCart(): void {
 
 export function cartTotal(cart: CartItem[]): number {
   return cart.reduce((sum, c) => sum + c.price * c.quantity, 0);
+}
+
+export function hasMultipleCartSellers(cart: CartItem[]): boolean {
+  const sellerIds = new Set(
+    cart
+      .map((item) => item.seller_id)
+      .filter((sellerId): sellerId is number => typeof sellerId === "number")
+  );
+  return sellerIds.size > 1;
 }

@@ -122,8 +122,8 @@ export default function OrdersPage() {
                     className="py-2 flex justify-between text-sm"
                   >
                     <span className="text-gray-700">
-                      {item.product?.title ??
-                        `${messages.productFallback} #${item.product_id}`}{" "}
+                      {(item.product_title || item.product?.title)
+                        ?? `${messages.productFallback} #${item.product_id}`}{" "}
                       x {item.quantity}
                     </span>
                     <span className="text-gray-500">

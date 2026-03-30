@@ -67,6 +67,8 @@ export default function OrderPaymentPage() {
     return <p className="text-red-500">{messages.orderNotFound}</p>;
   }
 
+  const paymentInstructions = order.payment_instructions;
+
   return (
     <div className="max-w-xl mx-auto">
       <h1 className="text-2xl font-bold mb-6">{messages.completePaymentTitle}</h1>
@@ -85,20 +87,33 @@ export default function OrderPaymentPage() {
             {messages.toFollowingBankAccount}
           </p>
 
-          <div className="bg-gray-50 p-4 rounded-md font-mono text-sm border">
-            <div>
-              <strong>{messages.bankLabel}:</strong> Techcombank
+          {paymentInstructions ? (
+            <div className="bg-gray-50 p-4 rounded-md font-mono text-sm border">
+              <div>
+                <strong>{messages.bankLabel}:</strong> {paymentInstructions.bank_name}
+              </div>
+              <div>
+                <strong>{messages.accountNameLabel}:</strong>{" "}
+                {paymentInstructions.account_name}
+              </div>
+              <div>
+                <strong>{messages.accountNumberLabel}:</strong>{" "}
+                {paymentInstructions.account_number}
+              </div>
+              <div className="mt-2 text-indigo-700 font-bold bg-indigo-50 p-2 inline-block rounded">
+                {messages.memoLabel}: {order.payment_reference || `ORD-${order.id}`}
+              </div>
+              {paymentInstructions.note && (
+                <p className="mt-3 font-sans text-sm text-gray-600">
+                  {paymentInstructions.note}
+                </p>
+              )}
             </div>
-            <div>
-              <strong>{messages.accountNameLabel}:</strong> NGUYEN THI MAI LAN
+          ) : (
+            <div className="rounded-md border border-yellow-200 bg-yellow-50 p-4 text-sm text-yellow-800">
+              {messages.paymentInstructionsUnavailable}
             </div>
-            <div>
-              <strong>{messages.accountNumberLabel}:</strong> 19072620168019
-            </div>
-            <div className="mt-2 text-indigo-700 font-bold bg-indigo-50 p-2 inline-block rounded">
-              {messages.memoLabel}: {order.payment_reference || `ORD-${order.id}`}
-            </div>
-          </div>
+          )}
 
           <p className="text-sm text-gray-500 italic mb-2">
             {messages.exactMemoWarning}

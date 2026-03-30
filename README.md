@@ -1,158 +1,91 @@
-# MarketPy
+# Marketplace MVP
 
-A simple two-sided marketplace MVP built with **FastAPI** (backend) + **Next.js 15** (frontend).
-
----
+Marketplace MVP built with Django + Django REST Framework for the backend and Next.js for the frontend.
 
 ## Project Structure
 
-```
+```text
 marketplace-mvp/
-├── backend/     FastAPI app (Python)
-└── frontend/    Next.js 15 app (TypeScript + Tailwind)
+|-- backend/   Django API
+|-- frontend/  Next.js app
+|-- .env.example
 ```
 
----
+## Backend Setup
 
-## Prerequisites
-
-- Python 3.11+ and `pip`
-- Node.js 18+ and `npm`
-- A terminal (PowerShell, bash, etc.)
-
----
-
-## 1. Backend Setup
+1. Create `backend/.env` from `.env.example`.
+2. Create and activate a virtual environment.
+3. Install backend dependencies:
 
 ```bash
 cd backend
-```
-
-**Create and activate a virtual environment:**
-
-```bash
-# Windows
-python -m venv venv
-venv\Scripts\activate
-
-# macOS / Linux
-python -m venv venv
-source venv/bin/activate
-```
-
-**Install dependencies:**
-
-```bash
 pip install -r requirements.txt
 ```
 
-**Configure environment variables:**
+4. Run migrations:
 
 ```bash
-# Copy example and edit as needed
-copy .env.example .env   # Windows
-cp .env.example .env     # macOS/Linux
+python manage.py migrate
 ```
 
-**Run the backend:**
+5. Start Django:
 
 ```bash
-uvicorn main:app --reload
+python manage.py runserver 127.0.0.1:8000
 ```
 
-Backend runs at: **http://localhost:8000**  
-Interactive API docs: **http://localhost:8000/docs**
+## Frontend Setup
 
----
-
-## 2. Frontend Setup
+1. Create `frontend/.env.local` from `frontend/.env.local.example`.
+2. Install dependencies and start Next.js:
 
 ```bash
 cd frontend
-```
-
-**Install dependencies:**
-
-```bash
 npm install
-```
-
-**Configure environment variables:**
-
-```bash
-# Windows
-copy .env.local.example .env.local
-# macOS/Linux
-cp .env.local.example .env.local
-```
-
-The `.env.local` should contain:
-```
-NEXT_PUBLIC_API_URL=http://localhost:8000
-```
-
-**Run the frontend:**
-
-```bash
 npm run dev
 ```
 
-Frontend runs at: **http://localhost:3000**
+## Key Environment Variables
 
----
+Backend:
+- `DATABASE_URL`
+- `DJANGO_DEBUG`
+- `DJANGO_SECRET_KEY`
+- `DJANGO_ALLOWED_HOSTS`
+- `DJANGO_CORS_ALLOWED_ORIGINS`
+- `DJANGO_CSRF_TRUSTED_ORIGINS`
+- `MANUAL_PAYMENT_BANK_NAME`
+- `MANUAL_PAYMENT_ACCOUNT_NAME`
+- `MANUAL_PAYMENT_ACCOUNT_NUMBER`
+- `MANUAL_PAYMENT_NOTE`
+- `DJANGO_MEDIA_STORAGE_BACKEND`
+- `DJANGO_MEDIA_PUBLIC_BASE_URL`
 
-## 3. Running Both Together
+Frontend:
+- `NEXT_PUBLIC_API_URL`
+- `NEXT_PUBLIC_MEDIA_URL`
 
-Open two terminals:
+## Production Notes
 
-| Terminal | Command |
-|---|---|
-| Terminal 1 (backend) | `cd backend && uvicorn main:app --reload` |
-| Terminal 2 (frontend) | `cd frontend && npm run dev` |
+- Set `DJANGO_DEBUG=0` in production.
+- Set `DJANGO_ALLOWED_HOSTS` to your Render hostnames.
+- Set `DJANGO_CORS_ALLOWED_ORIGINS` and `DJANGO_CSRF_TRUSTED_ORIGINS` to your Vercel frontend origins.
+- Configure manual payment instructions through backend env vars. The frontend no longer hardcodes bank details.
+- For production media, set `DJANGO_MEDIA_STORAGE_BACKEND=s3` and provide the S3-compatible env vars from `.env.example`.
+- Next.js image loading is env-driven through `NEXT_PUBLIC_API_URL` and `NEXT_PUBLIC_MEDIA_URL`.
 
----
+## Verification
 
-## 4. Available Routes
+Backend:
 
-### Buyer
-| Route | Description |
-|---|---|
-| `/` | Product catalog with search + filter |
-| `/products/[id]` | Product detail + Add to cart |
-| `/cart` | Shopping cart |
-| `/checkout` | Mock checkout |
-| `/orders` | Order history |
+```bash
+python manage.py check
+python manage.py test orders catalog
+```
 
-### Seller
-| Route | Description |
-|---|---|
-| `/seller/dashboard` | My products list |
-| `/seller/products/new` | Create product |
-| `/seller/products/[id]/edit` | Edit product |
-| `/seller/orders` | Sales (own product order items) |
+Frontend:
 
-### Auth
-| Route | Description |
-|---|---|
-| `/login` | Login |
-| `/register` | Register (optional: register as seller) |
-
----
-
-## 5. Mock Checkout Notes
-
-The checkout flow is intentionally mocked — no real payment processing occurs. Orders are created with status `paid_mock` immediately.
-
-See `PAYMENT_GATEWAY_NOTES.md` for how to integrate real Vietnamese payment gateways (PayOS, VNPay, MoMo) when you're ready.
-
----
-
-## 6. Tech Stack
-
-| Layer | Technology |
-|---|---|
-| Backend | FastAPI, SQLAlchemy, SQLite, JWT (python-jose), bcrypt |
-| Frontend | Next.js 15 (App Router), TypeScript, Tailwind CSS |
-| Auth | JWT stored in `localStorage` |
-| Cart | `localStorage` (client-side only) |
-| DB | SQLite (file: `backend/marketpy.db`) |
+```bash
+npm run lint
+npm run build
+```

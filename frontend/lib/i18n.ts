@@ -57,6 +57,7 @@ export interface TranslationMessages {
   pleaseLoginToCheckout: string;
   cartIsEmpty: string;
   nothingToCheckout: string;
+  singleSellerCheckoutMessage: string;
   orderPlacedContinuePayment: string;
   checkoutFailed: string;
   manualBankTransferRedirect: string;
@@ -81,6 +82,7 @@ export interface TranslationMessages {
   accountNameLabel: string;
   accountNumberLabel: string;
   memoLabel: string;
+  paymentInstructionsUnavailable: string;
   exactMemoWarning: string;
   paymentSubmitted: string;
   failedToLoadOrder: string;
@@ -220,6 +222,8 @@ export const translations: Record<Language, TranslationMessages> = {
     pleaseLoginToCheckout: "Vui lòng đăng nhập để thanh toán.",
     cartIsEmpty: "Giỏ hàng đang trống.",
     nothingToCheckout: "Không có gì để thanh toán.",
+    singleSellerCheckoutMessage:
+      "Chi co the thanh toan cac san pham tu cung mot nguoi ban trong mot don hang.",
     orderPlacedContinuePayment:
       "Đã tạo đơn hàng! Vui lòng hoàn tất thanh toán.",
     checkoutFailed: "Thanh toán thất bại",
@@ -246,6 +250,8 @@ export const translations: Record<Language, TranslationMessages> = {
     accountNameLabel: "Tên tài khoản",
     accountNumberLabel: "Số tài khoản",
     memoLabel: "Nội dung",
+    paymentInstructionsUnavailable:
+      "Thong tin chuyen khoan hien chua duoc cau hinh. Vui long lien he admin.",
     exactMemoWarning:
       "* Bạn phải nhập đúng nội dung ở trên để chúng tôi nhận diện thanh toán.",
     paymentSubmitted: "Đã gửi xác nhận thanh toán.",
@@ -388,6 +394,8 @@ export const translations: Record<Language, TranslationMessages> = {
     pleaseLoginToCheckout: "Please log in to checkout.",
     cartIsEmpty: "Cart is empty.",
     nothingToCheckout: "Nothing to checkout.",
+    singleSellerCheckoutMessage:
+      "You can only check out products from one seller at a time.",
     orderPlacedContinuePayment:
       "Order placed! Please complete payment.",
     checkoutFailed: "Checkout failed",
@@ -414,6 +422,8 @@ export const translations: Record<Language, TranslationMessages> = {
     accountNameLabel: "Account Name",
     accountNumberLabel: "Account Number",
     memoLabel: "Memo",
+    paymentInstructionsUnavailable:
+      "Payment instructions are not configured yet. Please contact support.",
     exactMemoWarning:
       "* Warning: You must include the exact memo above so we can identify your payment.",
     paymentSubmitted: "Payment submitted for confirmation.",

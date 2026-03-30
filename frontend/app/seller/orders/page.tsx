@@ -46,7 +46,7 @@ export default function SellerOrdersPage() {
             >
               <div>
                 <p className="font-medium">
-                  {item.product?.title ??
+                  {(item.product_title || item.product?.title) ??
                     `${messages.productFallback} #${item.product_id}`}
                 </p>
                 <p className="text-gray-400 text-xs">

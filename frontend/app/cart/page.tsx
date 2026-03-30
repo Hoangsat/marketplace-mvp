@@ -5,7 +5,14 @@
 import { useState } from "react";
 import Link from "next/link";
 import { useLanguage } from "@/components/LanguageProvider";
-import { CartItem, getCart, removeFromCart, updateQuantity, cartTotal } from "@/lib/cart";
+import {
+  CartItem,
+  cartTotal,
+  getCart,
+  hasMultipleCartSellers,
+  removeFromCart,
+  updateQuantity,
+} from "@/lib/cart";
 
 export default function CartPage() {
   const { messages } = useLanguage();
@@ -15,6 +22,7 @@ export default function CartPage() {
     }
     return getCart();
   });
+  const hasMultipleSellers = hasMultipleCartSellers(cart);
 
   function refresh() {
     const updated = getCart();
@@ -47,6 +55,11 @@ export default function CartPage() {
   return (
     <div className="max-w-2xl mx-auto">
       <h1 className="text-2xl font-bold mb-6">{messages.cartTitle}</h1>
+      {hasMultipleSellers && (
+        <div className="mb-4 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+          {messages.singleSellerCheckoutMessage}
+        </div>
+      )}
       <div className="space-y-4">
         {cart.map((item) => (
           <div key={item.product_id} className="flex items-center gap-4 bg-white border border-gray-200 rounded-lg p-4">
@@ -85,7 +98,17 @@ export default function CartPage() {
         </div>
         <Link
           href="/checkout"
-          className="bg-orange-600 text-white px-6 py-2 rounded font-medium hover:bg-orange-700"
+          onClick={(event) => {
+            if (hasMultipleSellers) {
+              event.preventDefault();
+            }
+          }}
+          aria-disabled={hasMultipleSellers}
+          className={`px-6 py-2 rounded font-medium text-white ${
+            hasMultipleSellers
+              ? "cursor-not-allowed bg-gray-400"
+              : "bg-orange-600 hover:bg-orange-700"
+          }`}
         >
           {messages.checkout}
         </Link>

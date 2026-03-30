@@ -39,6 +39,7 @@ def create_checkout_order(*, buyer, items):
         for product in Product.objects.filter(id__in=requested_quantities.keys())
     }
     products_to_buy = []
+    seller_ids = set()
     for product_id, quantity in requested_quantities.items():
         product = products.get(product_id)
         if not product:
@@ -57,6 +58,13 @@ def create_checkout_order(*, buyer, items):
                 status.HTTP_400_BAD_REQUEST,
             )
         products_to_buy.append((product, quantity))
+        seller_ids.add(product.seller_id)
+
+    if len(seller_ids) > 1:
+        raise OrderFlowError(
+            "Cart can only contain products from one seller. Please place separate orders.",
+            status.HTTP_400_BAD_REQUEST,
+        )
 
     total = sum(
         (product.price * qty for product, qty in products_to_buy),
@@ -80,6 +88,8 @@ def create_checkout_order(*, buyer, items):
                 product=product,
                 quantity=qty,
                 price_at_purchase=product.price,
+                product_title_snapshot=product.title,
+                product_image_snapshot=(product.images or [None])[0] or "",
             )
             for product, qty in products_to_buy
         ]

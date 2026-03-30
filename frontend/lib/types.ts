@@ -32,6 +32,13 @@ export interface Product {
   category: Category;
 }
 
+export interface PaymentInstructions {
+  bank_name: string;
+  account_name: string;
+  account_number: string;
+  note: string;
+}
+
 export interface User {
   id: number;
   email: string;
@@ -46,6 +53,8 @@ export interface OrderItem {
   product_id: number;
   quantity: number;
   price_at_purchase: number;
+  product_title: string;
+  product_image: string | null;
   product: Product;
 }
 
@@ -59,6 +68,7 @@ export interface Order {
   payment_reference?: string | null;
   payment_confirmed_at?: string | null;
   buyer_marked_paid_at?: string | null;
+  payment_instructions?: PaymentInstructions | null;
   created_at: string;
   items: OrderItem[];
 }
@@ -90,5 +100,7 @@ export interface SellerOrderItem {
   seller_amount: number;
   order_status: string;
   payout_status: string;
+  product_title: string;
+  product_image: string | null;
   product: Product;
 }

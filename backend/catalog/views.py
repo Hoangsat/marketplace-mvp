@@ -1,8 +1,8 @@
 from decimal import Decimal, InvalidOperation
-import os
 import uuid
 
-from django.conf import settings
+from django.core.files.storage import default_storage
+from django.db.models import ProtectedError
 from rest_framework import permissions, status
 from rest_framework.parsers import FormParser, JSONParser, MultiPartParser
 from rest_framework.response import Response
@@ -45,7 +45,6 @@ def _save_images(files) -> list[str]:
     if len(files) > MAX_IMAGES_PER_PRODUCT:
         raise ValueError(f"Maximum {MAX_IMAGES_PER_PRODUCT} images allowed")
 
-    os.makedirs(settings.MEDIA_ROOT, exist_ok=True)
     saved_paths: list[str] = []
 
     for file in files:
@@ -60,12 +59,8 @@ def _save_images(files) -> list[str]:
             raise ValueError(f"File '{filename}' exceeds 5MB limit")
 
         unique_name = f"{uuid.uuid4().hex}.{ext}"
-        dest_path = os.path.join(settings.MEDIA_ROOT, unique_name)
-        with open(dest_path, "wb") as destination:
-            for chunk in file.chunks():
-                destination.write(chunk)
-
-        saved_paths.append(f"{settings.MEDIA_URL}{unique_name}")
+        storage_name = default_storage.save(f"uploads/{unique_name}", file)
+        saved_paths.append(storage_name)
 
     return saved_paths
 
@@ -169,7 +164,9 @@ class ProductCollectionView(APIView):
         if max_price is not None:
             products = products.filter(price__lte=max_price)
 
-        return Response(ProductSerializer(products, many=True).data)
+        return Response(
+            ProductSerializer(products, many=True, context={"request": request}).data
+        )
 
     def post(self, request):
         serializer = ProductCreateSerializer(data=request.data)
@@ -221,7 +218,7 @@ class ProductCollectionView(APIView):
         )
         product = Product.objects.select_related("category").get(pk=product.pk)
         return Response(
-            ProductSerializer(product).data,
+            ProductSerializer(product, context={"request": request}).data,
             status=status.HTTP_201_CREATED,
         )
 
@@ -239,7 +236,7 @@ class ProductDetailView(APIView):
         product = Product.objects.select_related("category").filter(id=product_id).first()
         if not product:
             return _detail_response("Product not found", status.HTTP_404_NOT_FOUND)
-        return Response(ProductSerializer(product).data)
+        return Response(ProductSerializer(product, context={"request": request}).data)
 
     def put(self, request, product_id):
         product = Product.objects.select_related("category").filter(id=product_id).first()
@@ -268,7 +265,7 @@ class ProductDetailView(APIView):
         product.save()
         product.refresh_from_db()
         product = Product.objects.select_related("category").get(pk=product.pk)
-        return Response(ProductSerializer(product).data)
+        return Response(ProductSerializer(product, context={"request": request}).data)
 
     def delete(self, request, product_id):
         product = Product.objects.filter(id=product_id).first()
@@ -277,7 +274,13 @@ class ProductDetailView(APIView):
         if product.seller_id != request.user.id:
             return _detail_response("Not your product", status.HTTP_403_FORBIDDEN)
 
-        product.delete()
+        try:
+            product.delete()
+        except ProtectedError:
+            return _detail_response(
+                "This product has already been sold and cannot be deleted.",
+                status.HTTP_400_BAD_REQUEST,
+            )
         return Response(status=status.HTTP_204_NO_CONTENT)
 
 
@@ -302,7 +305,7 @@ class ProductImagesReplaceView(APIView):
             return _detail_response(str(exc), status.HTTP_400_BAD_REQUEST)
 
         product.save(update_fields=["images"])
-        return Response(ProductSerializer(product).data)
+        return Response(ProductSerializer(product, context={"request": request}).data)
 
 
 class SellerProductListView(APIView):
@@ -312,4 +315,6 @@ class SellerProductListView(APIView):
         products = Product.objects.select_related("category").filter(
             seller_id=request.user.id
         )
-        return Response(ProductSerializer(products, many=True).data)
+        return Response(
+            ProductSerializer(products, many=True, context={"request": request}).data
+        )
