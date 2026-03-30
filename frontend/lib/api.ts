@@ -1,7 +1,7 @@
 // lib/api.ts
 // Typed fetch wrapper that prepends API base URL and attaches JWT automatically.
 
-const BASE = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000";
+const BASE = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8011";
 
 function getToken(): string | null {
   if (typeof window === "undefined") return null;

@@ -3,7 +3,7 @@ import Link from "next/link";
 import Image from "next/image";
 import { Product } from "@/lib/types";
 
-const BASE = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000";
+const BASE = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8011";
 
 interface Props {
   product: Product;

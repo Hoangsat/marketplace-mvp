@@ -10,7 +10,7 @@ import { Product } from "@/lib/types";
 import { addToCart } from "@/lib/cart";
 import { showToast } from "@/components/Toast";
 
-const BASE = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000";
+const BASE = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8011";
 
 export default function ProductDetailPage() {
   const { id } = useParams<{ id: string }>();
