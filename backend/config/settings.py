@@ -19,11 +19,7 @@ DEFAULT_CATEGORY_NAMES = [
 
 SECRET_KEY = os.getenv("DJANGO_SECRET_KEY", "change-me-django-dev")
 DEBUG = os.getenv("DJANGO_DEBUG", "1") == "1"
-ALLOWED_HOSTS = [
-    host.strip()
-    for host in os.getenv("DJANGO_ALLOWED_HOSTS", "localhost,127.0.0.1,testserver").split(",")
-    if host.strip()
-]
+ALLOWED_HOSTS = ["*"]
 
 INSTALLED_APPS = [
     "django.contrib.admin",
