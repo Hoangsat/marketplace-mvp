@@ -12,7 +12,7 @@ def root(_request):
 
 
 urlpatterns = [
-    path("django-admin/", admin.site.urls),
+    path("admin/", admin.site.urls),
     path("", root, name="root"),
     path("", include("accounts.urls")),
     path("", include("catalog.urls")),
