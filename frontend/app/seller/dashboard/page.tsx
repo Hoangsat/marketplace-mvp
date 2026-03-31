@@ -1,20 +1,22 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useState } from "react";
+import { FormEvent, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useLanguage } from "@/components/LanguageProvider";
 import { showToast } from "@/components/Toast";
 import { apiFetch } from "@/lib/api";
 import { getToken } from "@/lib/auth";
 import { getMoneyStatusLabel, getOrderStatusLabel } from "@/lib/i18n";
-import { Product, SellerDashboardData } from "@/lib/types";
+import { PayoutRequest, Product, SellerDashboardData } from "@/lib/types";
 
 export default function SellerDashboardPage() {
   const router = useRouter();
   const { messages } = useLanguage();
   const [dashboard, setDashboard] = useState<SellerDashboardData | null>(null);
   const [products, setProducts] = useState<Product[]>([]);
+  const [payoutAmount, setPayoutAmount] = useState("");
+  const [submittingPayout, setSubmittingPayout] = useState(false);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -68,6 +70,42 @@ export default function SellerDashboardPage() {
     }
   }
 
+  async function handleSubmitPayoutRequest(
+    event: FormEvent<HTMLFormElement>
+  ) {
+    event.preventDefault();
+
+    if (!payoutAmount.trim()) {
+      showToast(messages.payoutAmountRequired, "error");
+      return;
+    }
+
+    if (Number(payoutAmount) <= 0) {
+      showToast(messages.payoutAmountMustBePositive, "error");
+      return;
+    }
+
+    try {
+      setSubmittingPayout(true);
+      await apiFetch<PayoutRequest>("/seller/payout-requests", {
+        method: "POST",
+        body: JSON.stringify({ amount: payoutAmount }),
+      });
+      showToast(messages.payoutRequestSubmitted, "success");
+      setPayoutAmount("");
+      const updatedDashboard =
+        await apiFetch<SellerDashboardData>("/seller/dashboard");
+      setDashboard(updatedDashboard);
+    } catch (e: unknown) {
+      showToast(
+        e instanceof Error ? e.message : messages.payoutRequestFailed,
+        "error"
+      );
+    } finally {
+      setSubmittingPayout(false);
+    }
+  }
+
   if (loading) {
     return <p className="text-gray-500">{messages.loading}</p>;
   }
@@ -117,6 +155,41 @@ export default function SellerDashboardPage() {
               ${Number(dashboard.total_earned).toFixed(2)}
             </p>
           </div>
+        </div>
+        <div className="mt-4 bg-white border border-gray-200 rounded-lg p-5">
+          <h2 className="text-lg font-semibold mb-4">
+            {messages.payoutRequestTitle}
+          </h2>
+          <form
+            onSubmit={handleSubmitPayoutRequest}
+            className="flex flex-col gap-3 sm:flex-row sm:items-end"
+          >
+            <div className="flex-1">
+              <label
+                htmlFor="payout-amount"
+                className="block text-sm text-gray-500 mb-2"
+              >
+                {messages.payoutAmountLabel}
+              </label>
+              <input
+                id="payout-amount"
+                type="number"
+                min="0.01"
+                step="0.01"
+                value={payoutAmount}
+                onChange={(event) => setPayoutAmount(event.target.value)}
+                placeholder={messages.payoutAmountPlaceholder}
+                className="w-full rounded border border-gray-300 px-3 py-2 text-sm"
+              />
+            </div>
+            <button
+              type="submit"
+              disabled={submittingPayout}
+              className="bg-orange-600 text-white px-4 py-2 rounded text-sm font-medium hover:bg-orange-700 disabled:opacity-60 disabled:cursor-not-allowed"
+            >
+              {submittingPayout ? messages.submitting : messages.requestPayout}
+            </button>
+          </form>
         </div>
       </section>
 

@@ -84,6 +84,24 @@ class CheckoutFlowTests(TestCase):
         self.assertEqual(order_item.product_title_snapshot, "Seller One Product")
         self.assertEqual(order_item.product_image_snapshot, "uploads/seller-one.png")
 
+    def test_checkout_rejects_inactive_product(self):
+        self.product_one.is_active = False
+        self.product_one.save(update_fields=["is_active"])
+        self.client.force_authenticate(user=self.buyer)
+
+        response = self.client.post(
+            "/orders/checkout",
+            {"items": [{"product_id": self.product_one.id, "quantity": 1}]},
+            format="json",
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
+        self.assertEqual(
+            response.json()["detail"],
+            f"Product {self.product_one.id} not found",
+        )
+        self.assertFalse(Order.objects.filter(buyer=self.buyer).exists())
+
 
 class OrderHistorySnapshotTests(TestCase):
     def setUp(self):
@@ -199,6 +217,8 @@ class DeliveredOrderSellerTransactionTests(TestCase):
             amount=Decimal("30.00"),
             status=SellerTransaction.Status.HOLD,
         )
+        self.seller.balance_pending = Decimal("30.00")
+        self.seller.save(update_fields=["balance_pending"])
 
     def test_mark_order_delivered_makes_hold_transactions_available(self):
         mark_order_delivered(order_id=self.order.id, current_user=self.seller)
@@ -218,7 +238,98 @@ class DeliveredOrderSellerTransactionTests(TestCase):
         order_admin.mark_as_shipped(request, Order.objects.filter(id=self.order.id))
 
         self.seller_transaction.refresh_from_db()
+        self.seller.refresh_from_db()
         self.assertEqual(
             self.seller_transaction.status,
             SellerTransaction.Status.AVAILABLE,
         )
+        self.assertEqual(self.seller.balance_pending, Decimal("0.00"))
+        self.assertEqual(self.seller.balance_available, Decimal("30.00"))
+
+
+class BuyerCancelPendingOrderTests(TestCase):
+    def setUp(self):
+        self.client = APIClient()
+        self.buyer = User.objects.create_user(
+            email="buyer@example.com",
+            password="password123",
+            is_seller=False,
+        )
+        self.other_buyer = User.objects.create_user(
+            email="other-buyer@example.com",
+            password="password123",
+            is_seller=False,
+        )
+        self.seller = User.objects.create_user(
+            email="seller@example.com",
+            password="password123",
+        )
+        self.category, _ = Category.objects.get_or_create(name="Games")
+        self.product = Product.objects.create(
+            title="Pending Order Product",
+            description="Product for order cancellation tests",
+            price=Decimal("22.00"),
+            stock=5,
+            seller=self.seller,
+            category=self.category,
+        )
+        self.pending_order = Order.objects.create(
+            buyer=self.buyer,
+            total=Decimal("22.00"),
+            status=Order.Status.PENDING,
+            payment_method="manual_bank",
+        )
+        OrderItem.objects.create(
+            order=self.pending_order,
+            product=self.product,
+            quantity=1,
+            price_at_purchase=Decimal("22.00"),
+            product_title_snapshot=self.product.title,
+            product_image_snapshot="",
+        )
+        self.paid_order = Order.objects.create(
+            buyer=self.buyer,
+            total=Decimal("22.00"),
+            status=Order.Status.PAID,
+            payment_method="manual_bank",
+        )
+        OrderItem.objects.create(
+            order=self.paid_order,
+            product=self.product,
+            quantity=1,
+            price_at_purchase=Decimal("22.00"),
+            product_title_snapshot=self.product.title,
+            product_image_snapshot="",
+        )
+
+    def test_buyer_can_cancel_own_pending_order(self):
+        self.client.force_authenticate(user=self.buyer)
+
+        response = self.client.post(f"/orders/{self.pending_order.id}/cancel")
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.pending_order.refresh_from_db()
+        self.assertEqual(self.pending_order.status, Order.Status.CANCELLED)
+
+    def test_buyer_cannot_cancel_non_pending_order(self):
+        self.client.force_authenticate(user=self.buyer)
+
+        response = self.client.post(f"/orders/{self.paid_order.id}/cancel")
+
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertEqual(
+            response.json()["detail"],
+            "Only pending orders can be cancelled",
+        )
+        self.paid_order.refresh_from_db()
+        self.assertEqual(self.paid_order.status, Order.Status.PAID)
+
+    def test_buyer_cannot_cancel_someone_elses_order(self):
+        self.client.force_authenticate(user=self.other_buyer)
+
+        response = self.client.post(f"/orders/{self.pending_order.id}/cancel")
+
+        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+        self.assertEqual(response.json()["detail"], "Not your order")
+        self.pending_order.refresh_from_db()
+        self.assertEqual(self.pending_order.status, Order.Status.PENDING)

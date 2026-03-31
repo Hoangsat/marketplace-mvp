@@ -47,6 +47,13 @@ export interface User {
   balance_available?: string;
 }
 
+export interface PayoutRequest {
+  id: number;
+  amount: string;
+  status: string;
+  created_at: string;
+}
+
 export interface OrderItem {
   id: number;
   order_id: number;

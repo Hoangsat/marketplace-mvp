@@ -98,6 +98,14 @@ export interface TranslationMessages {
   sellerDashboardTitle: string;
   pendingBalanceOnHold: string;
   availableBalance: string;
+  payoutRequestTitle: string;
+  payoutAmountLabel: string;
+  payoutAmountPlaceholder: string;
+  requestPayout: string;
+  payoutRequestSubmitted: string;
+  payoutAmountRequired: string;
+  payoutAmountMustBePositive: string;
+  payoutRequestFailed: string;
   paidOutBalance: string;
   totalEarnings: string;
   noSellerOrders: string;
@@ -270,6 +278,14 @@ export const translations: Record<Language, TranslationMessages> = {
     sellerDashboardTitle: "Bảng điều khiển người bán",
     pendingBalanceOnHold: "Số dư chờ xử lý (Đang giữ)",
     availableBalance: "Số dư khả dụng",
+    payoutRequestTitle: "Yêu cầu rút tiền",
+    payoutAmountLabel: "Số tiền rút",
+    payoutAmountPlaceholder: "Nhập số tiền muốn rút",
+    requestPayout: "Gửi yêu cầu rút tiền",
+    payoutRequestSubmitted: "Đã gửi yêu cầu rút tiền",
+    payoutAmountRequired: "Vui lòng nhập số tiền rút",
+    payoutAmountMustBePositive: "Số tiền rút phải lớn hơn 0",
+    payoutRequestFailed: "Không thể gửi yêu cầu rút tiền",
     paidOutBalance: "Đã chi trả",
     totalEarnings: "Tổng thu nhập",
     noSellerOrders: "Chưa có đơn hàng nào cho sản phẩm của bạn.",
@@ -442,6 +458,14 @@ export const translations: Record<Language, TranslationMessages> = {
     sellerDashboardTitle: "Seller Dashboard",
     pendingBalanceOnHold: "Pending Balance (On Hold)",
     availableBalance: "Available Balance",
+    payoutRequestTitle: "Request Payout",
+    payoutAmountLabel: "Payout Amount",
+    payoutAmountPlaceholder: "Enter payout amount",
+    requestPayout: "Submit Payout Request",
+    payoutRequestSubmitted: "Payout request submitted",
+    payoutAmountRequired: "Please enter a payout amount",
+    payoutAmountMustBePositive: "Payout amount must be greater than 0",
+    payoutRequestFailed: "Unable to submit payout request",
     paidOutBalance: "Paid Out",
     totalEarnings: "Total Earnings",
     noSellerOrders: "No orders yet for your products.",

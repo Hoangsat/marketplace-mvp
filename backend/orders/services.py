@@ -36,7 +36,10 @@ def create_checkout_order(*, buyer, items):
 
     products = {
         product.id: product
-        for product in Product.objects.filter(id__in=requested_quantities.keys())
+        for product in Product.objects.filter(
+            id__in=requested_quantities.keys(),
+            is_active=True,
+        )
     }
     products_to_buy = []
     seller_ids = set()
@@ -195,11 +198,19 @@ def confirm_order_payment(*, order_id, current_user=None):
     return _get_order_with_related(order_id)
 
 
-def cancel_order(*, order_id):
+def cancel_order(*, order_id, current_user=None):
     order = Order.objects.filter(id=order_id).first()
     if not order:
         raise OrderFlowError("Order not found", status.HTTP_404_NOT_FOUND)
-    if order.status not in [Order.Status.PENDING, Order.Status.DISPUTE]:
+    if current_user is not None:
+        if order.buyer_id != current_user.id:
+            raise OrderFlowError("Not your order", status.HTTP_403_FORBIDDEN)
+        if order.status != Order.Status.PENDING:
+            raise OrderFlowError(
+                "Only pending orders can be cancelled",
+                status.HTTP_400_BAD_REQUEST,
+            )
+    elif order.status not in [Order.Status.PENDING, Order.Status.DISPUTE]:
         raise OrderFlowError(
             "Cannot cancel order in current state",
             status.HTTP_400_BAD_REQUEST,
@@ -313,10 +324,10 @@ def mark_order_delivered(*, order_id, current_user):
                 status.HTTP_400_BAD_REQUEST,
             )
 
+        release_order_funds(order_id=order.id)
         order.status = Order.Status.DELIVERED
         order.delivered_at = timezone.now()
         order.save(update_fields=["status", "delivered_at"])
-        make_hold_seller_transactions_available(order)
 
     return _get_order_with_related(order_id)
 

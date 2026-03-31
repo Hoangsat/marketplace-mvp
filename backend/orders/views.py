@@ -228,6 +228,17 @@ class MarkCompletedView(APIView):
         return Response(OrderSerializer(order, context={"request": request}).data)
 
 
+class BuyerCancelOrderView(APIView):
+    permission_classes = [permissions.IsAuthenticated]
+
+    def post(self, request, order_id):
+        try:
+            order = cancel_order(order_id=order_id, current_user=request.user)
+        except OrderFlowError as exc:
+            return Response({"detail": str(exc.detail)}, status=exc.status_code)
+        return Response(OrderSerializer(order, context={"request": request}).data)
+
+
 class AdminCancelOrderView(APIView):
     permission_classes = [permissions.IsAdminUser]
 

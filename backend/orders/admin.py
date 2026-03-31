@@ -7,7 +7,6 @@ from django.utils import timezone
 from .services import (
     OrderFlowError,
     confirm_order_payment,
-    make_hold_seller_transactions_available,
     mark_seller_transaction_paid_out,
     release_order_funds,
 )
@@ -69,10 +68,10 @@ class OrderAdmin(admin.ModelAdmin):
         delivered_at = timezone.now()
 
         for order in paid_orders:
+            release_order_funds(order_id=order.id)
             order.status = Order.Status.DELIVERED
             order.delivered_at = delivered_at
             order.save(update_fields=["status", "delivered_at"])
-            make_hold_seller_transactions_available(order)
 
         updated_count = len(paid_orders)
         if updated_count:

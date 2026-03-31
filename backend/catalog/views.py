@@ -125,7 +125,10 @@ class ProductCollectionView(APIView):
         return [permissions.AllowAny()]
 
     def get(self, request):
-        products = Product.objects.select_related("category")
+        products = Product.objects.select_related("category").filter(
+            is_active=True,
+            stock__gt=0,
+        )
 
         search = request.query_params.get("search")
         category_id = request.query_params.get("category_id")
@@ -236,6 +239,9 @@ class ProductDetailView(APIView):
         product = Product.objects.select_related("category").filter(id=product_id).first()
         if not product:
             return _detail_response("Product not found", status.HTTP_404_NOT_FOUND)
+        if not product.is_active:
+            if not request.user.is_authenticated or product.seller_id != request.user.id:
+                return _detail_response("Product not found", status.HTTP_404_NOT_FOUND)
         return Response(ProductSerializer(product, context={"request": request}).data)
 
     def put(self, request, product_id):
@@ -277,10 +283,8 @@ class ProductDetailView(APIView):
         try:
             product.delete()
         except ProtectedError:
-            return _detail_response(
-                "This product has already been sold and cannot be deleted.",
-                status.HTTP_400_BAD_REQUEST,
-            )
+            product.is_active = False
+            product.save(update_fields=["is_active"])
         return Response(status=status.HTTP_204_NO_CONTENT)
 
 

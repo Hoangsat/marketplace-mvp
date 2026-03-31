@@ -48,6 +48,7 @@ class Product(models.Model):
     title = models.CharField(max_length=255, db_index=True)
     description = models.TextField()
     price = models.DecimalField(max_digits=12, decimal_places=2)
+    is_active = models.BooleanField(default=True)
     stock = models.IntegerField(default=0)
     images = models.JSONField(default=list, blank=True)
     seller = models.ForeignKey(

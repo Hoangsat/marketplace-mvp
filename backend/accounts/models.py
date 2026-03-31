@@ -25,3 +25,28 @@ class User(AbstractBaseUser, PermissionsMixin):
 
     def __str__(self) -> str:
         return self.email
+
+
+class PayoutRequest(models.Model):
+    class Status(models.TextChoices):
+        PENDING = "pending", "Pending"
+
+    id = models.AutoField(primary_key=True)
+    seller = models.ForeignKey(
+        User,
+        on_delete=models.CASCADE,
+        related_name="payout_requests",
+    )
+    amount = models.DecimalField(max_digits=12, decimal_places=2)
+    status = models.CharField(
+        max_length=20,
+        choices=Status.choices,
+        default=Status.PENDING,
+    )
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        db_table = "payout_requests"
+
+    def __str__(self) -> str:
+        return f"PayoutRequest #{self.pk}"

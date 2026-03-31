@@ -3,6 +3,7 @@ from django.urls import path
 from .views import (
     AdminCancelOrderView,
     AdminConfirmPaymentView,
+    BuyerCancelOrderView,
     BuyerOrderListView,
     CheckoutView,
     ConfirmPaymentView,
@@ -40,6 +41,11 @@ urlpatterns = [
         "orders/<int:order_id>/mark-completed",
         MarkCompletedView.as_view(),
         name="orders-mark-completed",
+    ),
+    path(
+        "orders/<int:order_id>/cancel",
+        BuyerCancelOrderView.as_view(),
+        name="orders-cancel",
     ),
     path(
         "admin/orders/<int:order_id>/confirm-payment",
