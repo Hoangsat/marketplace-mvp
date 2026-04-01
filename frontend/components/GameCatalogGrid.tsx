@@ -3,7 +3,8 @@
 import Link from "next/link";
 import { useEffect, useState } from "react";
 
-import CatalogBreadcrumbs from "@/components/CatalogBreadcrumbs";
+import CatalogCategoryStrip from "@/components/CatalogCategoryStrip";
+import CatalogPopularStrip from "@/components/CatalogPopularStrip";
 import { apiFetch } from "@/lib/api";
 import { useLanguage } from "@/components/LanguageProvider";
 import { Category } from "@/lib/types";
@@ -29,18 +30,9 @@ export default function GameCatalogGrid() {
 
   return (
     <div className="space-y-6">
-      <section className="rounded-2xl border border-orange-100 bg-gradient-to-br from-white to-orange-50 p-5 shadow-sm">
-        <CatalogBreadcrumbs
-          items={[{ label: messages.catalog }]}
-          className="text-orange-500"
-        />
-        <h1 className="text-3xl font-bold tracking-tight text-gray-900">
-          {messages.catalog}
-        </h1>
-        <p className="mt-2 max-w-2xl text-sm text-gray-600">
-          {messages.chooseGame}
-        </p>
-      </section>
+      <CatalogCategoryStrip />
+
+      <CatalogPopularStrip />
 
       <section className="space-y-4">
         <div className="flex items-center justify-between">

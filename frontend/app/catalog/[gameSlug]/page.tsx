@@ -5,6 +5,7 @@ import { useEffect, useState } from "react";
 import { useParams } from "next/navigation";
 
 import { apiFetch } from "@/lib/api";
+import CatalogCategoryStrip from "@/components/CatalogCategoryStrip";
 import CatalogBreadcrumbs from "@/components/CatalogBreadcrumbs";
 import { useLanguage } from "@/components/LanguageProvider";
 import ProductCard from "@/components/ProductCard";
@@ -67,6 +68,8 @@ export default function CatalogPlatformPage() {
 
   return (
     <div className="space-y-5">
+      <CatalogCategoryStrip activeCategorySlug={category?.slug ?? null} />
+
       <div className="rounded-2xl border border-gray-200 bg-white p-5 shadow-sm">
         <Link
           href="/catalog"

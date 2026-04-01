@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useEffect, useState } from "react";
 import { useParams } from "next/navigation";
 
+import CatalogCategoryStrip from "@/components/CatalogCategoryStrip";
 import CatalogBreadcrumbs from "@/components/CatalogBreadcrumbs";
 import ProductCard from "@/components/ProductCard";
 import { useLanguage } from "@/components/LanguageProvider";
@@ -80,6 +81,8 @@ export default function CategoryPage() {
 
   return (
     <div className="space-y-5">
+      <CatalogCategoryStrip activeCategorySlug={categorySlug} />
+
       <section className="rounded-3xl border border-slate-800 bg-slate-950 p-5 text-slate-100 shadow-xl">
         <Link
           href="/catalog"
