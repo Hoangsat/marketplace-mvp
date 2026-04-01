@@ -61,6 +61,16 @@ class ProductDeletionProtectionTests(TestCase):
         self.assertEqual(response.status_code, status.HTTP_204_NO_CONTENT)
         self.assertFalse(Product.objects.filter(id=self.unsold_product.id).exists())
 
+    def test_seller_product_list_excludes_soft_deleted_products_after_refresh(self):
+        self.client.delete(f"/products/{self.sold_product.id}")
+
+        response = self.client.get("/seller/products")
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        product_ids = [product["id"] for product in response.json()]
+        self.assertNotIn(self.sold_product.id, product_ids)
+        self.assertIn(self.unsold_product.id, product_ids)
+
 
 class ProductSerializerMediaTests(TestCase):
     @override_settings(MEDIA_PUBLIC_BASE_URL="https://media.example.com")

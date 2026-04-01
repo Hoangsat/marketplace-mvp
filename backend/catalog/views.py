@@ -325,7 +325,8 @@ class SellerProductListView(APIView):
 
     def get(self, request):
         products = Product.objects.select_related("category").filter(
-            seller_id=request.user.id
+            seller_id=request.user.id,
+            is_active=True,
         )
         return Response(
             ProductSerializer(products, many=True, context={"request": request}).data
