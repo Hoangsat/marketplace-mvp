@@ -145,7 +145,12 @@ class CategoryTopListView(APIView):
     permission_classes = [permissions.AllowAny]
 
     def get(self, request):
-        categories = _category_queryset().order_by("featured_rank", "name", "id")
+        categories = _category_queryset().order_by(
+            "-is_featured_home",
+            "featured_rank",
+            "name",
+            "id",
+        )
         return Response(CategorySerializer(categories, many=True).data)
 
 
@@ -181,7 +186,13 @@ class CategoryPlatformListView(APIView):
 
         platforms = (
             Platform.objects.filter(category_id=category.id, is_active=True)
-            .annotate(product_count=Count("products", filter=Q(products__is_active=True)))
+            .annotate(
+                product_count=Count(
+                    "products",
+                    filter=Q(products__is_active=True, products__stock__gt=0),
+                )
+            )
+            .filter(product_count__gt=0)
             .order_by("name", "id")
         )
         return Response(PlatformSerializer(platforms, many=True).data)
