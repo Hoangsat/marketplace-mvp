@@ -49,13 +49,19 @@ export default function Navbar() {
   return (
     <nav className="sticky top-0 z-50 bg-white border-b border-gray-200 shadow-sm">
       <div className="max-w-6xl mx-auto px-4 py-3 flex flex-wrap items-center gap-3">
-        <div className="flex min-w-0 flex-1 items-center gap-4 shrink-0">
-          <Link href="/" className="text-lg font-bold text-orange-600 shrink-0">
+        <div className="flex min-w-0 flex-1 items-center gap-3 sm:gap-4 shrink-0">
+          <Link
+            href="/"
+            className="shrink-0 whitespace-nowrap text-base font-bold text-orange-600 sm:text-lg"
+          >
             MarketPy
           </Link>
 
-          <div className="flex items-center gap-3 text-sm">
-            <Link href="/catalog" className="text-gray-600 hover:text-gray-900">
+          <div className="flex items-center gap-3 text-xs sm:text-sm">
+            <Link
+              href="/catalog"
+              className="whitespace-nowrap text-gray-600 hover:text-gray-900"
+            >
               {messages.catalog}
             </Link>
           </div>
@@ -74,11 +80,11 @@ export default function Navbar() {
           </Suspense>
         </div>
 
-        <div className="flex items-center gap-3 text-sm shrink-0">
+        <div className="ml-auto flex max-w-full flex-wrap items-center justify-end gap-x-3 gap-y-2 text-xs sm:flex-nowrap sm:text-sm shrink-0">
           {!mounted ? (
             <div
               aria-hidden="true"
-              className="flex items-center gap-3 text-sm text-transparent"
+              className="flex flex-wrap items-center justify-end gap-x-3 gap-y-2 text-xs text-transparent sm:flex-nowrap sm:text-sm"
             >
               <span className="select-none">Orders</span>
               <span className="select-none">Seller</span>
@@ -86,30 +92,36 @@ export default function Navbar() {
             </div>
           ) : loggedIn ? (
             <>
-              <Link href="/orders" className="text-gray-600 hover:text-gray-900">
+              <Link
+                href="/orders"
+                className="whitespace-nowrap text-gray-600 hover:text-gray-900"
+              >
                 {messages.orders}
               </Link>
               <Link
                 href="/seller/dashboard"
-                className="text-gray-600 hover:text-gray-900"
+                className="whitespace-nowrap text-gray-600 hover:text-gray-900"
               >
                 {messages.seller}
               </Link>
               <button
                 onClick={handleLogout}
-                className="text-gray-600 hover:text-gray-900"
+                className="whitespace-nowrap text-gray-600 hover:text-gray-900"
               >
                 {messages.logout}
               </button>
             </>
           ) : (
             <>
-              <Link href="/login" className="text-gray-600 hover:text-gray-900">
+              <Link
+                href="/login"
+                className="whitespace-nowrap text-gray-600 hover:text-gray-900"
+              >
                 {messages.login}
               </Link>
               <Link
                 href="/register"
-                className="bg-orange-600 text-white px-3 py-1.5 rounded hover:bg-orange-700"
+                className="whitespace-nowrap rounded bg-orange-600 px-3 py-1.5 text-white hover:bg-orange-700"
               >
                 {messages.register}
               </Link>

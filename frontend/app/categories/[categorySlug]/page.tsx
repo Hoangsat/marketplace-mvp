@@ -78,8 +78,6 @@ export default function CategoryPage() {
   }, [categorySlug]);
 
   const isTerminalCategory = !platforms || platforms.length === 0;
-  const browseGroupLabel =
-    category?.slug === "games" ? messages.gamesCategoryName : messages.platformsLabel;
 
   return (
     <div className="space-y-4">
@@ -119,9 +117,6 @@ export default function CategoryPage() {
       ) : (
         <>
           <section className="space-y-3">
-            <h2 className="text-sm font-semibold uppercase tracking-[0.16em] text-gray-500">
-              {browseGroupLabel}
-            </h2>
             {platforms.length > 0 ? (
               <div className="flex flex-wrap gap-2">
                 {platforms.map((platform) => (

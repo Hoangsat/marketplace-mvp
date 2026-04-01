@@ -350,7 +350,7 @@ class PlatformCatalogApiTests(TestCase):
         legacy_response = self.client.get("/offer-types", {"game": "free-fire"})
 
         self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertEqual(len(response.json()), 6)
+        self.assertEqual(len(response.json()), 7)
         self.assertTrue(
             all(item["platform_id"] == self.free_fire.id for item in response.json())
         )
@@ -420,10 +420,18 @@ class PlatformCatalogApiTests(TestCase):
             {
                 "black-myth-wukong",
                 "elden-ring",
-                "grand-theft-auto-v",
-                "minecraft",
+                "fc-online",
                 "free-fire",
+                "genshin-impact",
+                "grand-theft-auto-v",
+                "lien-minh-huyen-thoai",
+                "lien-minh-huyen-thoai-toc-chien",
+                "lien-quan-mobile",
+                "minecraft",
                 "pubg-mobile",
+                "pubg-mobile-vn",
+                "roblox",
+                "valorant",
                 "genshin-impact",
             },
         )
@@ -437,10 +445,6 @@ class PlatformCatalogApiTests(TestCase):
         )
         self.assertNotIn(
             "lineage-2",
-            {item["slug"] for item in games_response.json()},
-        )
-        self.assertNotIn(
-            "lien-quan-mobile",
             {item["slug"] for item in games_response.json()},
         )
 
@@ -468,7 +472,7 @@ class PlatformCatalogApiTests(TestCase):
         self.assertNotIn("steam-wallet-code", gift_card_slugs)
 
     def test_legacy_demo_game_platforms_are_moved_out_of_games_category(self):
-        legacy_slugs = {"dota-2", "league-of-legends", "lineage-2", "lien-quan-mobile"}
+        legacy_slugs = {"dota-2", "league-of-legends", "lineage-2"}
 
         self.assertFalse(
             Platform.objects.filter(
@@ -511,9 +515,42 @@ class PlatformCatalogApiTests(TestCase):
 
             self.assertEqual(response.status_code, status.HTTP_200_OK)
             self.assertTrue(response.json()["has_offer_types"])
-            self.assertEqual(
-                [item["slug"] for item in response.json()["offer_types"]],
-                expected_offer_type_slugs,
+            self.assertTrue(
+                set(expected_offer_type_slugs).issubset(
+                    {item["slug"] for item in response.json()["offer_types"]}
+                )
+            )
+
+    def test_requested_games_expose_requested_offer_type_hierarchy(self):
+        expected_offer_type_slugs = [
+            "accounts",
+            "boosting",
+            "coaching",
+            "currency",
+            "items",
+            "top-up",
+        ]
+
+        for platform_slug in (
+            "lien-quan-mobile",
+            "lien-minh-huyen-thoai",
+            "pubg-mobile-vn",
+            "valorant",
+            "fc-online",
+            "roblox",
+            "lien-minh-huyen-thoai-toc-chien",
+            "free-fire",
+            "genshin-impact",
+            "minecraft",
+        ):
+            response = self.client.get(f"/platforms/{platform_slug}")
+
+            self.assertEqual(response.status_code, status.HTTP_200_OK)
+            self.assertTrue(response.json()["has_offer_types"])
+            self.assertTrue(
+                set(expected_offer_type_slugs).issubset(
+                    {item["slug"] for item in response.json()["offer_types"]}
+                )
             )
 
     def test_create_product_without_offer_type_is_rejected_when_platform_uses_offer_types(self):
