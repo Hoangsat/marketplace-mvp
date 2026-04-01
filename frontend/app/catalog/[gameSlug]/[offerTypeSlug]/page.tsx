@@ -3,18 +3,19 @@
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import { useParams } from "next/navigation";
+
 import { apiFetch } from "@/lib/api";
 import { useLanguage } from "@/components/LanguageProvider";
 import ProductCard from "@/components/ProductCard";
 import { getToken } from "@/lib/auth";
-import { Game, OfferType, Product } from "@/lib/types";
+import { OfferType, Platform, Product } from "@/lib/types";
 import { Language } from "@/lib/i18n";
 
-function getGameName(game: Game, language: Language) {
+function getPlatformName(platform: Platform, language: Language) {
   if (language === "vi") {
-    return game.display_name_vi || game.name;
+    return platform.display_name_vi || platform.name;
   }
-  return game.name;
+  return platform.name;
 }
 
 function getOfferTypeName(offerType: OfferType, language: Language) {
@@ -30,7 +31,7 @@ export default function CatalogOfferTypePage() {
     offerTypeSlug: string;
   }>();
   const { language, messages } = useLanguage();
-  const [game, setGame] = useState<Game | null>(null);
+  const [platform, setPlatform] = useState<Platform | null>(null);
   const [offerType, setOfferType] = useState<OfferType | null>(null);
   const [products, setProducts] = useState<Product[]>([]);
   const [loading, setLoading] = useState(true);
@@ -45,33 +46,39 @@ export default function CatalogOfferTypePage() {
   }, []);
 
   useEffect(() => {
-    Promise.all([apiFetch<Game[]>("/games"), apiFetch<OfferType[]>("/offer-types")])
-      .then(async ([games, offerTypes]) => {
-        const selectedGame = games.find((item) => item.slug === gameSlug) ?? null;
+    Promise.all([
+      apiFetch<Platform>(`/platforms/${encodeURIComponent(gameSlug)}`),
+      apiFetch<OfferType[]>(
+        `/offer-types?platform=${encodeURIComponent(gameSlug)}`
+      ),
+    ])
+      .then(async ([platformData, offerTypes]) => {
         const selectedOfferType =
           offerTypes.find((item) => item.slug === offerTypeSlug) ?? null;
 
-        if (!selectedGame || !selectedOfferType) {
-          setGame(selectedGame);
-          setOfferType(selectedOfferType);
+        if (!selectedOfferType) {
+          setPlatform(platformData);
+          setOfferType(null);
           setProducts([]);
           setError(false);
           return;
         }
 
         const params = new URLSearchParams({
-          game: selectedGame.slug,
+          platform: platformData.slug,
           offer_type: selectedOfferType.slug,
         });
-        const productData = await apiFetch<Product[]>(`/products?${params.toString()}`);
+        const productData = await apiFetch<Product[]>(
+          `/products?${params.toString()}`
+        );
 
-        setGame(selectedGame);
+        setPlatform(platformData);
         setOfferType(selectedOfferType);
         setProducts(productData);
         setError(false);
       })
       .catch(() => {
-        setGame(null);
+        setPlatform(null);
         setOfferType(null);
         setProducts([]);
         setError(true);
@@ -79,7 +86,7 @@ export default function CatalogOfferTypePage() {
       .finally(() => setLoading(false));
   }, [gameSlug, offerTypeSlug]);
 
-  const missingMessage = !game
+  const missingMessage = !platform
     ? messages.gameNotFound
     : !offerType
       ? messages.offerTypeNotFound
@@ -89,7 +96,7 @@ export default function CatalogOfferTypePage() {
     <div className="space-y-6">
       <div className="rounded-2xl border border-gray-200 bg-white p-6 shadow-sm">
         <Link
-          href={game ? `/catalog/${game.slug}` : "/catalog"}
+          href={platform ? `/catalog/${platform.slug}` : "/catalog"}
           className="text-sm font-medium text-orange-600 hover:underline"
         >
           {messages.backToOfferTypes}
@@ -97,8 +104,8 @@ export default function CatalogOfferTypePage() {
         <div className="mt-4 flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
           <div>
             <h1 className="text-3xl font-bold tracking-tight text-gray-900">
-              {game && offerType
-                ? `${getGameName(game, language)} / ${getOfferTypeName(
+              {platform && offerType
+                ? `${getPlatformName(platform, language)} / ${getOfferTypeName(
                     offerType,
                     language
                   )}`
@@ -108,9 +115,9 @@ export default function CatalogOfferTypePage() {
               {messages.browseProductsForSelection}
             </p>
           </div>
-          {canSell && game && offerType && (
+          {canSell && platform && offerType && (
             <Link
-              href={`/seller/products/new?game=${game.slug}&offerType=${offerType.slug}`}
+              href={`/seller/products/new?platform=${platform.slug}&offerType=${offerType.slug}`}
               className="inline-flex items-center justify-center rounded-xl bg-orange-600 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-orange-700"
             >
               {messages.sellInThisCategory}

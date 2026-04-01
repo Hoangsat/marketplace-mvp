@@ -59,7 +59,12 @@ class BuyerOrderListView(APIView):
     def get(self, request):
         orders = auto_complete_delivered_orders(
             Order.objects.filter(buyer_id=request.user.id)
-            .prefetch_related("items__product__category")
+            .prefetch_related(
+                "items__product__category",
+                "items__product__platform",
+                "items__product__platform__category",
+                "items__product__offer_type",
+            )
             .select_related("buyer")
             .order_by("-created_at")
         )
@@ -75,7 +80,13 @@ class SellerOrderItemListView(APIView):
         items = list(
             OrderItem.objects.filter(product__seller_id=request.user.id)
             .exclude(order__status=Order.Status.PENDING)
-            .select_related("product__category", "order")
+            .select_related(
+                "product__category",
+                "product__platform",
+                "product__platform__category",
+                "product__offer_type",
+                "order",
+            )
             .prefetch_related(
                 Prefetch(
                     "order__seller_transactions",

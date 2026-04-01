@@ -135,7 +135,12 @@ class PublicSellerProfileView(APIView):
             )
 
         products = Product.objects.select_related(
-            "category", "seller", "seller__profile"
+            "category",
+            "platform",
+            "platform__category",
+            "offer_type",
+            "seller",
+            "seller__profile",
         ).filter(
             seller_id=profile.user_id,
             is_active=True,

@@ -5,7 +5,7 @@ from rest_framework import status
 from rest_framework.test import APIClient
 
 from accounts.models import User, UserProfile
-from catalog.models import Category, Product
+from catalog.models import Category, OfferType, Platform, Product
 from catalog.serializers import ProductSerializer
 from orders.services import create_checkout_order
 
@@ -225,3 +225,208 @@ class PublicCatalogVisibilityTests(TestCase):
 
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(response.json()["id"], inactive_product.id)
+
+
+class PlatformCatalogApiTests(TestCase):
+    def setUp(self):
+        self.client = APIClient()
+        self.seller = User.objects.create_user(
+            email="seller@example.com",
+            password="password123",
+        )
+        self.games_category, _ = Category.objects.get_or_create(
+            name="Games",
+            defaults={
+                "slug": "games",
+                "is_featured_home": True,
+                "featured_rank": 1,
+            },
+        )
+        self.software_category = Category.objects.create(
+            name="Software",
+            slug="software",
+            is_featured_home=True,
+            featured_rank=2,
+        )
+        self.steam = Platform.objects.create(
+            name="Steam",
+            slug="steam",
+            display_name_vi="Steam",
+            category=self.games_category,
+        )
+        self.chatgpt = Platform.objects.create(
+            name="ChatGPT",
+            slug="chatgpt",
+            display_name_vi="ChatGPT",
+            category=self.software_category,
+        )
+        self.steam_accounts = OfferType.objects.create(
+            platform=self.steam,
+            name="Accounts",
+            slug="accounts",
+            display_name_vi="Tai khoan",
+        )
+        self.chatgpt_accounts = OfferType.objects.create(
+            platform=self.chatgpt,
+            name="Accounts",
+            slug="accounts",
+            display_name_vi="Tai khoan",
+        )
+        self.steam_product = Product.objects.create(
+            title="Steam account",
+            description="Ready to use",
+            price=Decimal("25.00"),
+            stock=2,
+            seller=self.seller,
+            category=self.games_category,
+            platform=self.steam,
+            offer_type=self.steam_accounts,
+        )
+        Product.objects.create(
+            title="ChatGPT account",
+            description="Business account",
+            price=Decimal("30.00"),
+            stock=2,
+            seller=self.seller,
+            category=self.software_category,
+            platform=self.chatgpt,
+            offer_type=self.chatgpt_accounts,
+        )
+
+    def test_platform_alias_endpoints_return_platforms(self):
+        response = self.client.get("/platforms")
+        legacy_response = self.client.get("/games")
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(legacy_response.status_code, status.HTTP_200_OK)
+        self.assertEqual(
+            [item["slug"] for item in response.json()],
+            [item["slug"] for item in legacy_response.json()],
+        )
+
+    def test_offer_types_can_be_filtered_by_platform_alias(self):
+        response = self.client.get("/offer-types", {"platform": "steam"})
+        legacy_response = self.client.get("/offer-types", {"game": "steam"})
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(len(response.json()), 1)
+        self.assertEqual(response.json()[0]["platform_id"], self.steam.id)
+        self.assertEqual(response.json(), legacy_response.json())
+
+    def test_products_can_be_filtered_by_platform_and_legacy_game_alias(self):
+        response = self.client.get("/products", {"platform": "steam"})
+        legacy_response = self.client.get("/products", {"game": "steam"})
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(len(response.json()), 1)
+        self.assertEqual(response.json()[0]["id"], self.steam_product.id)
+        self.assertEqual(response.json(), legacy_response.json())
+
+    def test_create_product_accepts_legacy_game_id_alias(self):
+        self.client.force_authenticate(user=self.seller)
+
+        response = self.client.post(
+            "/products",
+            {
+                "title": "Steam wallet top-up",
+                "description": "Instant delivery",
+                "price": "9.99",
+                "stock": 4,
+                "game_id": self.steam.id,
+                "offer_type_id": self.steam_accounts.id,
+            },
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+        created = Product.objects.get(id=response.json()["id"])
+        self.assertEqual(created.platform_id, self.steam.id)
+        self.assertEqual(created.category_id, self.games_category.id)
+        self.assertEqual(created.offer_type_id, self.steam_accounts.id)
+
+    def test_category_catalog_endpoints_return_top_level_navigation(self):
+        response = self.client.get("/api/catalog/categories/top")
+        platform_response = self.client.get("/api/catalog/categories/games/platforms")
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(platform_response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.json()[0]["slug"], "games")
+        self.assertEqual(platform_response.json()[0]["slug"], "steam")
+
+    def test_platform_detail_exposes_offer_type_usage(self):
+        response = self.client.get("/platforms/steam")
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertTrue(response.json()["has_offer_types"])
+        self.assertEqual(response.json()["offer_types"][0]["slug"], "accounts")
+
+    def test_create_product_without_offer_type_is_rejected_when_platform_uses_offer_types(self):
+        self.client.force_authenticate(user=self.seller)
+
+        response = self.client.post(
+            "/products",
+            {
+                "title": "Steam direct listing",
+                "description": "Should fail",
+                "price": "11.00",
+                "stock": 1,
+                "platform_id": self.steam.id,
+            },
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertEqual(
+            response.json()["detail"],
+            "Offer type is required for this platform",
+        )
+
+    def test_create_product_without_offer_type_is_allowed_when_platform_has_no_offer_types(self):
+        self.client.force_authenticate(user=self.seller)
+        telegram = Platform.objects.create(
+            name="Telegram",
+            slug="telegram",
+            display_name_vi="Telegram",
+            category=self.software_category,
+        )
+
+        response = self.client.post(
+            "/products",
+            {
+                "title": "Telegram account",
+                "description": "Direct platform listing",
+                "price": "19.00",
+                "stock": 2,
+                "platform_id": telegram.id,
+            },
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+        created = Product.objects.get(id=response.json()["id"])
+        self.assertEqual(created.platform_id, telegram.id)
+        self.assertIsNone(created.offer_type_id)
+
+    def test_update_product_can_clear_offer_type_when_platform_has_no_offer_types(self):
+        self.client.force_authenticate(user=self.seller)
+        telegram = Platform.objects.create(
+            name="Telegram",
+            slug="telegram-2",
+            display_name_vi="Telegram",
+            category=self.software_category,
+        )
+
+        response = self.client.put(
+            f"/products/{self.steam_product.id}",
+            {
+                "platform_id": telegram.id,
+                "offer_type_id": None,
+                "title": self.steam_product.title,
+                "description": self.steam_product.description,
+                "price": str(self.steam_product.price),
+                "stock": self.steam_product.stock,
+            },
+            format="json",
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.steam_product.refresh_from_db()
+        self.assertEqual(self.steam_product.platform_id, telegram.id)
+        self.assertIsNone(self.steam_product.offer_type_id)

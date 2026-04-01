@@ -1,21 +1,20 @@
 "use client";
 
-// app/seller/products/new/page.tsx - Create a new product
-
 import { useEffect, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
+
 import { useLanguage } from "@/components/LanguageProvider";
 import { showToast } from "@/components/Toast";
 import { apiFetch } from "@/lib/api";
 import { getToken } from "@/lib/auth";
-import { Category, Game, OfferType } from "@/lib/types";
+import { Category, OfferType, Platform, PlatformDetail } from "@/lib/types";
 import { Language } from "@/lib/i18n";
 
-function getGameName(game: Game, language: Language) {
+function getPlatformName(platform: Platform, language: Language) {
   if (language === "vi") {
-    return game.display_name_vi || game.name;
+    return platform.display_name_vi || platform.name;
   }
-  return game.name;
+  return platform.name;
 }
 
 function getOfferTypeName(offerType: OfferType, language: Language) {
@@ -30,12 +29,13 @@ export default function NewProductPageClient() {
   const searchParams = useSearchParams();
   const { language, messages } = useLanguage();
   const [categories, setCategories] = useState<Category[]>([]);
+  const [platforms, setPlatforms] = useState<Platform[]>([]);
+  const [offerTypes, setOfferTypes] = useState<OfferType[]>([]);
   const [loading, setLoading] = useState(false);
-  const [selectedGame, setSelectedGame] = useState<Game | null>(null);
-  const [selectedOfferType, setSelectedOfferType] = useState<OfferType | null>(
-    null
-  );
+  const [selectedPlatform, setSelectedPlatform] = useState<Platform | null>(null);
+  const [selectedOfferType, setSelectedOfferType] = useState<OfferType | null>(null);
   const [selectedCategory, setSelectedCategory] = useState<Category | null>(null);
+  const [platformUsesOfferTypes, setPlatformUsesOfferTypes] = useState(false);
 
   const [form, setForm] = useState({
     title: "",
@@ -43,56 +43,147 @@ export default function NewProductPageClient() {
     price: "",
     stock: "",
     category_id: "",
+    platform_id: "",
+    offer_type_id: "",
   });
   const [images, setImages] = useState<FileList | null>(null);
 
-  const gameSlug = searchParams.get("game");
+  const platformSlug = searchParams.get("platform") || searchParams.get("game");
   const offerTypeSlug = searchParams.get("offerType");
-  const hasCatalogQuery = Boolean(gameSlug || offerTypeSlug);
+  const hasCatalogQuery = Boolean(platformSlug || offerTypeSlug);
 
   useEffect(() => {
     if (!getToken()) {
       router.push("/login");
       return;
     }
-    Promise.all([
-      apiFetch<Category[]>("/categories"),
-      apiFetch<Game[]>("/games"),
-      apiFetch<OfferType[]>("/offer-types"),
-    ])
-      .then(([categoriesData, gamesData, offerTypesData]) => {
-        const resolvedGame =
-          gamesData.find((game) => game.slug === gameSlug) ?? null;
-        const resolvedOfferType =
-          offerTypesData.find((offerType) => offerType.slug === offerTypeSlug) ??
-          null;
+
+    let isCancelled = false;
+
+    Promise.all([apiFetch<Category[]>("/categories"), apiFetch<Platform[]>("/platforms")])
+      .then(async ([categoriesData, platformData]) => {
+        const resolvedPlatform =
+          platformData.find((platform) => platform.slug === platformSlug) ?? null;
+
+        let platformDetail: PlatformDetail | null = null;
+        if (resolvedPlatform) {
+          platformDetail = await apiFetch<PlatformDetail>(
+            `/platforms/${encodeURIComponent(resolvedPlatform.slug)}`
+          );
+        }
+
         const resolvedCategory =
-          resolvedGame && resolvedOfferType
+          resolvedPlatform
             ? categoriesData.find(
-                (category) => category.name.toLowerCase() === "games"
+                (category) => category.id === resolvedPlatform.category_id
               ) ?? null
             : null;
+        const resolvedOfferTypes = platformDetail?.offer_types ?? [];
+        const resolvedOfferType =
+          resolvedOfferTypes.find((offerType) => offerType.slug === offerTypeSlug) ??
+          null;
+
+        if (isCancelled) {
+          return;
+        }
 
         setCategories(categoriesData);
-        setSelectedGame(resolvedGame);
+        setPlatforms(platformData);
+        setSelectedPlatform(resolvedPlatform);
         setSelectedOfferType(resolvedOfferType);
         setSelectedCategory(resolvedCategory);
+        setOfferTypes(resolvedOfferTypes);
+        setPlatformUsesOfferTypes(platformDetail?.has_offer_types ?? false);
         setForm((currentForm) => ({
           ...currentForm,
-          category_id: resolvedCategory
-            ? String(resolvedCategory.id)
-            : resolvedGame && resolvedOfferType
-              ? ""
-              : currentForm.category_id,
+          category_id: resolvedCategory ? String(resolvedCategory.id) : currentForm.category_id,
+          platform_id: resolvedPlatform ? String(resolvedPlatform.id) : currentForm.platform_id,
+          offer_type_id: resolvedOfferType ? String(resolvedOfferType.id) : "",
         }));
       })
       .catch(() => {
+        if (isCancelled) {
+          return;
+        }
         setCategories([]);
-        setSelectedGame(null);
+        setPlatforms([]);
+        setOfferTypes([]);
+        setSelectedPlatform(null);
         setSelectedOfferType(null);
         setSelectedCategory(null);
+        setPlatformUsesOfferTypes(false);
       });
-  }, [gameSlug, offerTypeSlug, router]);
+
+    return () => {
+      isCancelled = true;
+    };
+  }, [offerTypeSlug, platformSlug, router]);
+
+  useEffect(() => {
+    const platformId = Number(form.platform_id);
+    const nextPlatform =
+      platforms.find((platform) => platform.id === platformId) ?? null;
+
+    if (!nextPlatform) {
+      setSelectedPlatform(null);
+      setSelectedCategory(null);
+      setSelectedOfferType(null);
+      setOfferTypes([]);
+      setPlatformUsesOfferTypes(false);
+      return;
+    }
+
+    if (selectedPlatform?.id === nextPlatform.id && offerTypes.length > 0) {
+      return;
+    }
+
+    const nextCategory =
+      categories.find((category) => category.id === nextPlatform.category_id) ?? null;
+    setSelectedPlatform(nextPlatform);
+    setSelectedCategory(nextCategory);
+    setForm((current) => ({
+      ...current,
+      category_id: nextCategory ? String(nextCategory.id) : current.category_id,
+    }));
+
+    let isCancelled = false;
+    apiFetch<PlatformDetail>(`/platforms/${encodeURIComponent(nextPlatform.slug)}`)
+      .then((platformDetail) => {
+        if (isCancelled) {
+          return;
+        }
+        setOfferTypes(platformDetail.offer_types);
+        setPlatformUsesOfferTypes(platformDetail.has_offer_types);
+
+        if (!platformDetail.has_offer_types) {
+          setSelectedOfferType(null);
+          setForm((current) => ({ ...current, offer_type_id: "" }));
+          return;
+        }
+
+        const nextOfferType =
+          platformDetail.offer_types.find(
+            (offerType) => offerType.id === Number(form.offer_type_id)
+          ) ?? null;
+        setSelectedOfferType(nextOfferType);
+        if (!nextOfferType) {
+          setForm((current) => ({ ...current, offer_type_id: "" }));
+        }
+      })
+      .catch(() => {
+        if (isCancelled) {
+          return;
+        }
+        setOfferTypes([]);
+        setPlatformUsesOfferTypes(false);
+        setSelectedOfferType(null);
+        setForm((current) => ({ ...current, offer_type_id: "" }));
+      });
+
+    return () => {
+      isCancelled = true;
+    };
+  }, [categories, form.offer_type_id, form.platform_id, offerTypes.length, platforms, selectedPlatform?.id]);
 
   function set(field: string, value: string) {
     setForm((currentForm) => ({ ...currentForm, [field]: value }));
@@ -110,11 +201,11 @@ export default function NewProductPageClient() {
       if (form.category_id) {
         fd.append("category_id", form.category_id);
       }
-      if (selectedGame) {
-        fd.append("game_id", String(selectedGame.id));
+      if (form.platform_id) {
+        fd.append("platform_id", form.platform_id);
       }
-      if (selectedOfferType) {
-        fd.append("offer_type_id", String(selectedOfferType.id));
+      if (form.offer_type_id) {
+        fd.append("offer_type_id", form.offer_type_id);
       }
       if (images) {
         Array.from(images).forEach((file) => fd.append("images", file));
@@ -133,13 +224,9 @@ export default function NewProductPageClient() {
     }
   }
 
-  const hasResolvedCatalogCategory = Boolean(
-    selectedGame && selectedOfferType && selectedCategory
-  );
   const showCatalogContext = Boolean(
-    selectedGame || selectedOfferType || hasResolvedCatalogCategory || hasCatalogQuery
+    selectedPlatform || selectedOfferType || selectedCategory || hasCatalogQuery
   );
-  const showManualCategoryFallback = hasCatalogQuery && !hasResolvedCatalogCategory;
 
   return (
     <div className="max-w-lg mx-auto">
@@ -149,15 +236,15 @@ export default function NewProductPageClient() {
           <p className="font-medium text-gray-900">
             {messages.catalogContextPrefilled}
           </p>
-          {hasResolvedCatalogCategory && (
+          {selectedCategory && (
             <p className="mt-2 text-gray-700">
-              {messages.selectedCategoryLabel}: {messages.gamesCategoryName}
+              {messages.selectedCategoryLabel}: {selectedCategory.name}
             </p>
           )}
-          {selectedGame && (
+          {selectedPlatform && (
             <p className="mt-2 text-gray-700">
               {messages.selectedGameLabel}:{" "}
-              {getGameName(selectedGame, language)}
+              {getPlatformName(selectedPlatform, language)}
             </p>
           )}
           {selectedOfferType && (
@@ -166,11 +253,9 @@ export default function NewProductPageClient() {
               {getOfferTypeName(selectedOfferType, language)}
             </p>
           )}
-          {hasResolvedCatalogCategory ? (
+          {selectedPlatform && (
             <p className="mt-2 text-gray-600">{messages.categoryAutoAssigned}</p>
-          ) : showManualCategoryFallback ? (
-            <p className="mt-2 text-gray-600">{messages.categoryFallbackManual}</p>
-          ) : null}
+          )}
         </div>
       )}
       <form onSubmit={handleSubmit} className="space-y-4">
@@ -214,18 +299,43 @@ export default function NewProductPageClient() {
             />
           </Field>
         </div>
-        {!hasResolvedCatalogCategory && (
-          <Field label={messages.categoryLabel}>
+        <Field label={messages.categoryLabel}>
+          <select required value={form.category_id} className={input} disabled>
+            <option value="">{messages.selectCategory}</option>
+            {categories.map((category) => (
+              <option key={category.id} value={category.id}>
+                {category.name}
+              </option>
+            ))}
+          </select>
+        </Field>
+        <Field label={messages.selectedGameLabel}>
+          <select
+            required
+            value={form.platform_id}
+            onChange={(event) => set("platform_id", event.target.value)}
+            className={input}
+          >
+            <option value="">{messages.chooseGame}</option>
+            {platforms.map((platform) => (
+              <option key={platform.id} value={platform.id}>
+                {getPlatformName(platform, language)}
+              </option>
+            ))}
+          </select>
+        </Field>
+        {(platformUsesOfferTypes || offerTypes.length > 0) && (
+          <Field label={messages.selectedOfferTypeLabel}>
             <select
-              required
-              value={form.category_id}
-              onChange={(event) => set("category_id", event.target.value)}
+              required={platformUsesOfferTypes}
+              value={form.offer_type_id}
+              onChange={(event) => set("offer_type_id", event.target.value)}
               className={input}
             >
-              <option value="">{messages.selectCategory}</option>
-              {categories.map((category) => (
-                <option key={category.id} value={category.id}>
-                  {category.name}
+              <option value="">{messages.chooseOfferType}</option>
+              {offerTypes.map((offerType) => (
+                <option key={offerType.id} value={offerType.id}>
+                  {getOfferTypeName(offerType, language)}
                 </option>
               ))}
             </select>

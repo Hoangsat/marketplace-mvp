@@ -20,9 +20,12 @@ function shouldAttachAuth(path: string, method?: string): boolean {
     if (
       normalizedPath === "/categories" ||
       normalizedPath === "/games" ||
+      normalizedPath === "/platforms" ||
+      /^\/platforms\/[^/]+$/.test(normalizedPath) ||
       normalizedPath === "/offer-types" ||
       normalizedPath === "/products" ||
       /^\/products\/\d+$/.test(normalizedPath) ||
+      /^\/api\/catalog\/.+$/.test(normalizedPath) ||
       /^\/api\/sellers\/[^/]+$/.test(normalizedPath)
     ) {
       return false;

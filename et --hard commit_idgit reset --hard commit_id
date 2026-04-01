@@ -1,0 +1,35 @@
+[33m4d64d69[m[33m ([m[1;36mHEAD[m[33m -> [m[1;32mmain[m[33m, [m[1;31morigin/main[m[33m)[m Hide soft-deleted products from seller product list
+[33m4cb676d[m Require seller nickname at registration and add public seller profiles
+[33m9f1d29c[m Fix auth, delivery funds, product access, password validation
+[33m54712f9[m Phase 1 complete: order delivery syncs seller transactions (hold → available), admin + service logic aligned
+[33m80a6483[m Phase 1 stabilization: single-seller checkout, order snapshots, media storage, security hardening, payment config
+[33m72c4a55[m Fix Vercel build error for seller new product page
+[33m0bcbc15[m Add real Games category for game listings
+[33mc1d32e5[m Make homepage start from game catalog
+[33ma20438c[m Clean up catalog navigation and filter bar UI
+[33m6156c20[m Add seller payout tracking and fix navbar hydration
+[33mc49ba91[m Complete bilingual UI for product and seller product pages
+[33m35a6273[m Fix stale token handling for public API requests
+[33m8d47d7b[m Extend Vietnamese and English UI to core marketplace flows
+[33m5a1ed88[m Add basic Vietnamese and English UI support
+[33md862cc9[m Add frontend catalog browse flow
+[33meae2d91[m fix product filters and constraints
+[33me739087[m clean requirements for django
+[33m90bc3de[m connect postgres via DATABASE_URL
+[33md6575e9[m Implement marketplace MVP: payments, hold system, order lifecycle, security fixes
+[33m1090d7c[m Fix static storage with WhiteNoise
+[33m4c1dad3[m Fix Django static files for production
+[33m5b6c178[m MVP: migrated to Django, fixed auth, admin panel, order flow and payment confirmation
+[33m769e571[m change admin url
+[33me06a7b4[m fix allowed hosts
+[33m79c8345[m fix: add gunicorn
+[33mb961e13[m fix folder name
+[33m44de4d6[m switch to django backend
+[33mfba1f24[m stable fastapi version before django migration
+[33m6f1bf8e[m add confirm password validation
+[33m9013a5a[m fix cors for vercel frontend
+[33m4f92226[m fix auth UI update after login/logout
+[33m062afac[m checkpoint before fixing registration
+[33m8002a00[m fix runtime location for render
+[33m24dc1dd[m fix python version
+[33m5649c28[m Initial MVP: MarketPy marketplace

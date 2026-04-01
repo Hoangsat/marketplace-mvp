@@ -368,7 +368,13 @@ def auto_complete_delivered_orders(queryset):
 def _get_order_with_related(order_id):
     return (
         Order.objects.filter(id=order_id)
-        .prefetch_related("items__product__category", "seller_transactions__seller")
+        .prefetch_related(
+            "items__product__category",
+            "items__product__platform",
+            "items__product__platform__category",
+            "items__product__offer_type",
+            "seller_transactions__seller",
+        )
         .select_related("buyer")
         .first()
     )
@@ -378,7 +384,12 @@ def _get_order_for_update(order_id):
     return (
         Order.objects.select_for_update()
         .filter(id=order_id)
-        .prefetch_related("items__product__seller")
+        .prefetch_related(
+            "items__product__seller",
+            "items__product__platform",
+            "items__product__platform__category",
+            "items__product__offer_type",
+        )
         .select_related("buyer")
         .first()
     )

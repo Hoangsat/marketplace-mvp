@@ -3,25 +3,62 @@ from rest_framework import serializers
 
 from common.media import normalize_media_urls
 
-from .models import Category, Game, OfferType, Product
+from .models import Category, OfferType, Platform, Product
 
 
 class CategorySerializer(serializers.ModelSerializer):
+    parent_id = serializers.IntegerField(read_only=True)
+
     class Meta:
         model = Category
-        fields = ("id", "name")
+        fields = (
+            "id",
+            "name",
+            "slug",
+            "parent_id",
+            "is_featured_home",
+            "featured_rank",
+        )
 
 
-class GameSerializer(serializers.ModelSerializer):
+class CategoryDetailSerializer(CategorySerializer):
+    class Meta(CategorySerializer.Meta):
+        fields = CategorySerializer.Meta.fields
+
+
+class PlatformSerializer(serializers.ModelSerializer):
+    category_id = serializers.IntegerField(read_only=True)
+
     class Meta:
-        model = Game
-        fields = ("id", "name", "slug", "display_name_vi")
+        model = Platform
+        fields = ("id", "name", "slug", "display_name_vi", "category_id")
+
+
+class PlatformDetailSerializer(PlatformSerializer):
+    has_offer_types = serializers.SerializerMethodField()
+    offer_types = serializers.SerializerMethodField()
+
+    class Meta(PlatformSerializer.Meta):
+        fields = PlatformSerializer.Meta.fields + ("has_offer_types", "offer_types")
+
+    def get_has_offer_types(self, obj):
+        if hasattr(obj, "active_offer_type_count"):
+            return obj.active_offer_type_count > 0
+        return obj.offer_types.filter(is_active=True).exists()
+
+    def get_offer_types(self, obj):
+        offer_types = getattr(obj, "active_offer_types", None)
+        if offer_types is None:
+            offer_types = obj.offer_types.filter(is_active=True).order_by("name", "id")
+        return OfferTypeSerializer(offer_types, many=True).data
 
 
 class OfferTypeSerializer(serializers.ModelSerializer):
+    platform_id = serializers.IntegerField(read_only=True)
+
     class Meta:
         model = OfferType
-        fields = ("id", "name", "slug", "display_name_vi")
+        fields = ("id", "name", "slug", "display_name_vi", "platform_id")
 
 
 class ProductSerializer(serializers.ModelSerializer):
@@ -30,7 +67,11 @@ class ProductSerializer(serializers.ModelSerializer):
     seller_id = serializers.IntegerField(read_only=True)
     seller_nickname = serializers.SerializerMethodField()
     category_id = serializers.IntegerField(read_only=True)
+    platform_id = serializers.IntegerField(read_only=True)
+    offer_type_id = serializers.IntegerField(read_only=True)
     category = CategorySerializer(read_only=True)
+    platform = PlatformSerializer(read_only=True)
+    offer_type = OfferTypeSerializer(read_only=True)
 
     class Meta:
         model = Product
@@ -44,7 +85,11 @@ class ProductSerializer(serializers.ModelSerializer):
             "seller_id",
             "seller_nickname",
             "category_id",
+            "platform_id",
+            "offer_type_id",
             "category",
+            "platform",
+            "offer_type",
         )
 
     def get_images(self, obj):
@@ -77,6 +122,7 @@ class ProductCreateSerializer(serializers.Serializer):
     price = serializers.DecimalField(max_digits=12, decimal_places=2)
     stock = serializers.IntegerField()
     category_id = serializers.IntegerField(required=False)
+    platform_id = serializers.IntegerField(required=False)
     game_id = serializers.IntegerField(required=False)
     offer_type_id = serializers.IntegerField(required=False)
 
@@ -97,6 +143,9 @@ class ProductUpdateSerializer(serializers.Serializer):
     price = serializers.DecimalField(max_digits=12, decimal_places=2, required=False)
     stock = serializers.IntegerField(required=False)
     category_id = serializers.IntegerField(required=False)
+    platform_id = serializers.IntegerField(required=False)
+    game_id = serializers.IntegerField(required=False)
+    offer_type_id = serializers.IntegerField(required=False, allow_null=True)
 
     def validate_price(self, value):
         if value <= 0:
@@ -107,3 +156,7 @@ class ProductUpdateSerializer(serializers.Serializer):
         if value < 0:
             raise serializers.ValidationError("Stock cannot be negative")
         return value
+
+
+# Temporary alias for compatibility while the frontend/backend move away from game naming.
+GameSerializer = PlatformSerializer

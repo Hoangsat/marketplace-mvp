@@ -1,16 +1,25 @@
-// lib/types.ts
-// Shared TypeScript types matching the FastAPI backend schemas.
-
 export interface Category {
   id: number;
   name: string;
+  slug: string;
+  parent_id: number | null;
+  is_featured_home: boolean;
+  featured_rank: number;
 }
 
-export interface Game {
+export interface CategoryDetail extends Category {}
+
+export interface Platform {
   id: number;
   name: string;
   slug: string;
   display_name_vi: string;
+  category_id: number;
+}
+
+export interface PlatformDetail extends Platform {
+  has_offer_types: boolean;
+  offer_types: OfferType[];
 }
 
 export interface OfferType {
@@ -18,6 +27,7 @@ export interface OfferType {
   name: string;
   slug: string;
   display_name_vi: string;
+  platform_id: number;
 }
 
 export interface Product {
@@ -30,7 +40,11 @@ export interface Product {
   seller_id: number;
   seller_nickname?: string;
   category_id: number;
+  platform_id: number | null;
+  offer_type_id: number | null;
   category: Category;
+  platform: Platform | null;
+  offer_type: OfferType | null;
 }
 
 export interface PublicSellerProfile {

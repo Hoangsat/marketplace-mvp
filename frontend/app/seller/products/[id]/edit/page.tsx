@@ -1,23 +1,40 @@
 "use client";
 
-// app/seller/products/[id]/edit/page.tsx - Edit an existing product
-
 import { useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
+
 import { useLanguage } from "@/components/LanguageProvider";
 import { showToast } from "@/components/Toast";
 import { apiFetch } from "@/lib/api";
 import { getToken } from "@/lib/auth";
-import { Category, Product } from "@/lib/types";
+import { Category, OfferType, Platform, PlatformDetail, Product } from "@/lib/types";
+import { Language } from "@/lib/i18n";
+
+function getPlatformName(platform: Platform, language: Language) {
+  if (language === "vi") {
+    return platform.display_name_vi || platform.name;
+  }
+  return platform.name;
+}
+
+function getOfferTypeName(offerType: OfferType, language: Language) {
+  if (language === "vi") {
+    return offerType.display_name_vi || offerType.name;
+  }
+  return offerType.name;
+}
 
 export default function EditProductPage() {
   const { id } = useParams<{ id: string }>();
   const router = useRouter();
-  const { messages } = useLanguage();
+  const { language, messages } = useLanguage();
   const [categories, setCategories] = useState<Category[]>([]);
+  const [platforms, setPlatforms] = useState<Platform[]>([]);
+  const [offerTypes, setOfferTypes] = useState<OfferType[]>([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [newImages, setNewImages] = useState<FileList | null>(null);
+  const [platformUsesOfferTypes, setPlatformUsesOfferTypes] = useState(false);
 
   const [form, setForm] = useState({
     title: "",
@@ -25,6 +42,8 @@ export default function EditProductPage() {
     price: "",
     stock: "",
     category_id: "",
+    platform_id: "",
+    offer_type_id: "",
   });
 
   useEffect(() => {
@@ -36,20 +55,81 @@ export default function EditProductPage() {
     Promise.all([
       apiFetch<Product>(`/products/${id}`),
       apiFetch<Category[]>("/categories"),
+      apiFetch<Platform[]>("/platforms"),
     ])
-      .then(([product, categoriesData]) => {
+      .then(async ([product, categoriesData, platformsData]) => {
+        let detail: PlatformDetail | null = null;
+        if (product.platform?.slug) {
+          detail = await apiFetch<PlatformDetail>(
+            `/platforms/${encodeURIComponent(product.platform.slug)}`
+          );
+        }
+
         setForm({
           title: product.title,
           description: product.description,
           price: String(product.price),
           stock: String(product.stock),
           category_id: String(product.category_id),
+          platform_id: product.platform_id ? String(product.platform_id) : "",
+          offer_type_id: product.offer_type_id ? String(product.offer_type_id) : "",
         });
         setCategories(categoriesData);
+        setPlatforms(platformsData);
+        setOfferTypes(detail?.offer_types ?? []);
+        setPlatformUsesOfferTypes(detail?.has_offer_types ?? false);
       })
       .catch((error: Error) => showToast(error.message, "error"))
       .finally(() => setLoading(false));
   }, [id, router]);
+
+  useEffect(() => {
+    const platformId = Number(form.platform_id);
+    const platform = platforms.find((item) => item.id === platformId);
+    if (!platform) {
+      setOfferTypes([]);
+      setPlatformUsesOfferTypes(false);
+      return;
+    }
+
+    const category =
+      categories.find((item) => item.id === platform.category_id) ?? null;
+    if (category && form.category_id !== String(category.id)) {
+      setForm((current) => ({ ...current, category_id: String(category.id) }));
+    }
+
+    let isCancelled = false;
+    apiFetch<PlatformDetail>(`/platforms/${encodeURIComponent(platform.slug)}`)
+      .then((detail) => {
+        if (isCancelled) {
+          return;
+        }
+        setOfferTypes(detail.offer_types);
+        setPlatformUsesOfferTypes(detail.has_offer_types);
+        if (
+          detail.has_offer_types &&
+          !detail.offer_types.some(
+            (offerType) => offerType.id === Number(form.offer_type_id)
+          )
+        ) {
+          setForm((current) => ({ ...current, offer_type_id: "" }));
+        }
+        if (!detail.has_offer_types && form.offer_type_id) {
+          setForm((current) => ({ ...current, offer_type_id: "" }));
+        }
+      })
+      .catch(() => {
+        if (isCancelled) {
+          return;
+        }
+        setOfferTypes([]);
+        setPlatformUsesOfferTypes(false);
+      });
+
+    return () => {
+      isCancelled = true;
+    };
+  }, [categories, form.offer_type_id, form.platform_id, platforms]);
 
   function set(field: string, value: string) {
     setForm((currentForm) => ({ ...currentForm, [field]: value }));
@@ -67,6 +147,8 @@ export default function EditProductPage() {
           price: parseFloat(form.price),
           stock: parseInt(form.stock),
           category_id: parseInt(form.category_id),
+          platform_id: parseInt(form.platform_id),
+          offer_type_id: form.offer_type_id ? parseInt(form.offer_type_id) : null,
         }),
       });
 
@@ -134,12 +216,7 @@ export default function EditProductPage() {
           </Field>
         </div>
         <Field label={messages.categoryLabel}>
-          <select
-            required
-            value={form.category_id}
-            onChange={(event) => set("category_id", event.target.value)}
-            className={input}
-          >
+          <select required value={form.category_id} className={input} disabled>
             <option value="">{messages.selectCategory}</option>
             {categories.map((category) => (
               <option key={category.id} value={category.id}>
@@ -147,7 +224,40 @@ export default function EditProductPage() {
               </option>
             ))}
           </select>
+          <p className="mt-1 text-xs text-gray-500">{messages.categoryAutoAssigned}</p>
         </Field>
+        <Field label={messages.selectedGameLabel}>
+          <select
+            required
+            value={form.platform_id}
+            onChange={(event) => set("platform_id", event.target.value)}
+            className={input}
+          >
+            <option value="">{messages.chooseGame}</option>
+            {platforms.map((platform) => (
+              <option key={platform.id} value={platform.id}>
+                {getPlatformName(platform, language)}
+              </option>
+            ))}
+          </select>
+        </Field>
+        {(platformUsesOfferTypes || offerTypes.length > 0) && (
+          <Field label={messages.selectedOfferTypeLabel}>
+            <select
+              required={platformUsesOfferTypes}
+              value={form.offer_type_id}
+              onChange={(event) => set("offer_type_id", event.target.value)}
+              className={input}
+            >
+              <option value="">{messages.chooseOfferType}</option>
+              {offerTypes.map((offerType) => (
+                <option key={offerType.id} value={offerType.id}>
+                  {getOfferTypeName(offerType, language)}
+                </option>
+              ))}
+            </select>
+          </Field>
+        )}
         <Field label={messages.replaceImagesLabel}>
           <input
             type="file"
