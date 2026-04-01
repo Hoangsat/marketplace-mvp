@@ -1,8 +1,9 @@
 "use client";
 
 // components/ProductCard.tsx
-import Link from "next/link";
 import Image from "next/image";
+import Link from "next/link";
+
 import { useLanguage } from "@/components/LanguageProvider";
 import { resolveMediaUrl } from "@/lib/media";
 import { Product } from "@/lib/types";
@@ -14,33 +15,52 @@ interface Props {
 export default function ProductCard({ product }: Props) {
   const { messages } = useLanguage();
   const imgSrc = resolveMediaUrl(product.images?.[0]);
+  const hasSellerProfile =
+    !!product.seller_nickname && product.seller_nickname !== "Seller";
+  const sellerHref = hasSellerProfile
+    ? `/sellers/${encodeURIComponent(product.seller_nickname ?? "")}`
+    : null;
 
   return (
-    <Link
-      href={`/products/${product.id}`}
-      className="group block bg-white border border-gray-200 rounded-lg overflow-hidden hover:shadow-md transition-shadow"
-    >
-      <div className="aspect-square bg-gray-100 relative overflow-hidden">
-        {imgSrc ? (
-          <Image
-            src={imgSrc}
-            alt={product.title}
-            fill
-            className="object-cover group-hover:scale-105 transition-transform duration-200"
-            sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 25vw"
-          />
-        ) : (
-          <div className="w-full h-full flex items-center justify-center text-gray-400 text-4xl">
-            📦
-          </div>
-        )}
-      </div>
-      <div className="p-3">
-        <p className="text-sm font-medium text-gray-900 line-clamp-2 leading-snug">
-          {product.title}
-        </p>
-        <p className="mt-1 text-orange-600 font-semibold text-sm">
-          ${product.price.toFixed(2)}
+    <div className="group bg-white border border-gray-200 rounded-lg overflow-hidden hover:shadow-md transition-shadow">
+      <Link href={`/products/${product.id}`} className="block">
+        <div className="aspect-square bg-gray-100 relative overflow-hidden">
+          {imgSrc ? (
+            <Image
+              src={imgSrc}
+              alt={product.title}
+              fill
+              className="object-cover group-hover:scale-105 transition-transform duration-200"
+              sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 25vw"
+            />
+          ) : (
+            <div className="w-full h-full flex items-center justify-center text-gray-400 text-4xl">
+              []
+            </div>
+          )}
+        </div>
+        <div className="p-3 pb-2">
+          <p className="text-sm font-medium text-gray-900 line-clamp-2 leading-snug">
+            {product.title}
+          </p>
+          <p className="mt-1 text-orange-600 font-semibold text-sm">
+            ${product.price.toFixed(2)}
+          </p>
+        </div>
+      </Link>
+      <div className="px-3 pb-3">
+        <p className="mt-1 text-xs text-gray-500">
+          {messages.seller}:{" "}
+          {sellerHref ? (
+            <Link
+              href={sellerHref}
+              className="font-medium hover:text-orange-600 hover:underline"
+            >
+              {product.seller_nickname}
+            </Link>
+          ) : (
+            <span>{product.seller_nickname || "Seller"}</span>
+          )}
         </p>
         <p className="text-xs text-gray-400 mt-0.5">
           {product.stock > 0
@@ -48,6 +68,6 @@ export default function ProductCard({ product }: Props) {
             : messages.outOfStock}
         </p>
       </div>
-    </Link>
+    </div>
   );
 }

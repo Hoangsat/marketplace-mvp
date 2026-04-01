@@ -4,7 +4,8 @@ from django.test import TestCase
 from rest_framework import status
 from rest_framework.test import APIClient
 
-from accounts.models import PayoutRequest, User
+from accounts.models import PayoutRequest, User, UserProfile
+from catalog.models import Category, Product
 
 
 class LoginViewTests(TestCase):
@@ -31,17 +32,156 @@ class LoginViewTests(TestCase):
 class RegisterViewTests(TestCase):
     def setUp(self):
         self.client = APIClient()
+        self.strong_password = "StrongPass!234"
+
+    def test_register_requires_nickname(self):
+        response = self.client.post(
+            "/auth/register",
+            {"email": "missing@example.com", "password": self.strong_password},
+            format="json",
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertEqual(response.json()["detail"], "Nickname is required")
+        self.assertFalse(User.objects.filter(email="missing@example.com").exists())
+
+    def test_register_rejects_invalid_nickname_characters(self):
+        response = self.client.post(
+            "/auth/register",
+            {
+                "email": "invalid@example.com",
+                "password": self.strong_password,
+                "nickname": "bad name!",
+            },
+            format="json",
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertEqual(
+            response.json()["detail"],
+            "Nickname may only contain letters, numbers, underscores, hyphens, and dots",
+        )
+        self.assertFalse(User.objects.filter(email="invalid@example.com").exists())
+
+    def test_register_rejects_duplicate_nickname(self):
+        existing_user = User.objects.create_user(
+            email="existing@example.com",
+            password=self.strong_password,
+        )
+        UserProfile.objects.create(user=existing_user, nickname="taken_name")
+
+        response = self.client.post(
+            "/auth/register",
+            {
+                "email": "duplicate@example.com",
+                "password": self.strong_password,
+                "nickname": "taken_name",
+            },
+            format="json",
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertEqual(response.json()["detail"], "Nickname is already taken")
+        self.assertFalse(User.objects.filter(email="duplicate@example.com").exists())
+
+    def test_register_trims_nickname_before_saving_profile(self):
+        response = self.client.post(
+            "/auth/register",
+            {
+                "email": "trimmed@example.com",
+                "password": self.strong_password,
+                "nickname": "  PixelTrader  ",
+            },
+            format="json",
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+        user = User.objects.get(email="trimmed@example.com")
+        self.assertEqual(user.profile.nickname, "PixelTrader")
+
+    def test_register_creates_user_profile_with_nickname(self):
+        response = self.client.post(
+            "/auth/register",
+            {
+                "email": "profile@example.com",
+                "password": self.strong_password,
+                "nickname": "Seller.One",
+            },
+            format="json",
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+        user = User.objects.get(email="profile@example.com")
+        self.assertTrue(UserProfile.objects.filter(user=user).exists())
+        self.assertEqual(user.profile.nickname, "Seller.One")
 
     def test_weak_password_is_rejected_by_backend_validation(self):
         response = self.client.post(
             "/auth/register",
-            {"email": "weak@example.com", "password": "123"},
+            {
+                "email": "weak@example.com",
+                "password": "123",
+                "nickname": "WeakSeller",
+            },
             format="json",
         )
 
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
         self.assertIn("too short", response.json()["detail"].lower())
         self.assertFalse(User.objects.filter(email="weak@example.com").exists())
+
+
+class PublicSellerProfileViewTests(TestCase):
+    def setUp(self):
+        self.client = APIClient()
+        self.category, _ = Category.objects.get_or_create(name="Games")
+
+    def test_public_seller_profile_returns_404_when_nickname_not_found(self):
+        response = self.client.get("/api/sellers/unknown-seller/")
+
+        self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
+        self.assertEqual(response.json()["detail"], "Seller not found")
+
+    def test_public_seller_profile_returns_only_public_products(self):
+        seller = User.objects.create_user(
+            email="seller@example.com",
+            password="password123",
+        )
+        UserProfile.objects.create(user=seller, nickname="market_seller")
+        Product.objects.create(
+            title="Visible Product",
+            description="Visible",
+            price=Decimal("10.00"),
+            stock=3,
+            seller=seller,
+            category=self.category,
+            is_active=True,
+        )
+        Product.objects.create(
+            title="Sold Out Product",
+            description="Sold out",
+            price=Decimal("11.00"),
+            stock=0,
+            seller=seller,
+            category=self.category,
+            is_active=True,
+        )
+        Product.objects.create(
+            title="Inactive Product",
+            description="Inactive",
+            price=Decimal("12.00"),
+            stock=3,
+            seller=seller,
+            category=self.category,
+            is_active=False,
+        )
+
+        response = self.client.get("/api/sellers/market_seller/")
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.json()["nickname"], "market_seller")
+        self.assertEqual(len(response.json()["products"]), 1)
+        self.assertEqual(response.json()["products"][0]["title"], "Visible Product")
 
 
 class PayoutRequestViewTests(TestCase):

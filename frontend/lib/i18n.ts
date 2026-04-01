@@ -34,6 +34,7 @@ export interface TranslationMessages {
   browseProductsForSelection: string;
   loadProductsError: string;
   email: string;
+  nickname: string;
   password: string;
   confirmPassword: string;
   createAccount: string;
@@ -44,6 +45,9 @@ export interface TranslationMessages {
   dontHaveAccount: string;
   alreadyHaveAccount: string;
   passwordsDoNotMatch: string;
+  nicknameRequired: string;
+  nicknameLengthError: string;
+  nicknameInvalidError: string;
   accountCreated: string;
   registrationFailed: string;
   loggedIn: string;
@@ -128,6 +132,8 @@ export interface TranslationMessages {
   viewOrderItems: string;
   salesOrderItems: string;
   quantityShort: string;
+  sellerProfileNotFound: string;
+  loadSellerProfileError: string;
   productNotFound: string;
   back: string;
   categoryLabel: string;
@@ -207,6 +213,7 @@ export const translations: Record<Language, TranslationMessages> = {
     browseProductsForSelection: "Xem sản phẩm cho lựa chọn này.",
     loadProductsError: "Không thể tải sản phẩm.",
     email: "Email",
+    nickname: "Biệt danh",
     password: "Mật khẩu",
     confirmPassword: "Xác nhận mật khẩu",
     createAccount: "Tạo tài khoản",
@@ -217,6 +224,10 @@ export const translations: Record<Language, TranslationMessages> = {
     dontHaveAccount: "Chưa có tài khoản?",
     alreadyHaveAccount: "Đã có tài khoản?",
     passwordsDoNotMatch: "Mật khẩu không khớp",
+    nicknameRequired: "Vui lòng nhập biệt danh",
+    nicknameLengthError: "Biệt danh phải có từ 3 đến 30 ký tự",
+    nicknameInvalidError:
+      "Biệt danh chỉ được chứa chữ cái, số, dấu gạch dưới, gạch ngang và dấu chấm",
     accountCreated: "Tạo tài khoản thành công! Vui lòng đăng nhập.",
     registrationFailed: "Đăng ký thất bại",
     loggedIn: "Đăng nhập thành công!",
@@ -309,6 +320,8 @@ export const translations: Record<Language, TranslationMessages> = {
     viewOrderItems: "Xem mục đơn hàng cho sản phẩm của tôi",
     salesOrderItems: "Đơn bán (mục đơn hàng)",
     quantityShort: "SL",
+    sellerProfileNotFound: "Không tìm thấy người bán.",
+    loadSellerProfileError: "Không thể tải trang người bán.",
     productNotFound: "Không tìm thấy sản phẩm.",
     back: "Quay lại",
     categoryLabel: "Danh mục",
@@ -387,6 +400,7 @@ export const translations: Record<Language, TranslationMessages> = {
     browseProductsForSelection: "Browse products for this catalog selection.",
     loadProductsError: "Unable to load products.",
     email: "Email",
+    nickname: "Nickname",
     password: "Password",
     confirmPassword: "Confirm Password",
     createAccount: "Create Account",
@@ -397,6 +411,10 @@ export const translations: Record<Language, TranslationMessages> = {
     dontHaveAccount: "Don't have an account?",
     alreadyHaveAccount: "Already have an account?",
     passwordsDoNotMatch: "Passwords do not match",
+    nicknameRequired: "Please enter a nickname",
+    nicknameLengthError: "Nickname must be between 3 and 30 characters",
+    nicknameInvalidError:
+      "Nickname may only contain letters, numbers, underscores, hyphens, and dots",
     accountCreated: "Account created! Please log in.",
     registrationFailed: "Registration failed",
     loggedIn: "Logged in!",
@@ -488,6 +506,8 @@ export const translations: Record<Language, TranslationMessages> = {
     viewOrderItems: "View order items for my products",
     salesOrderItems: "Sales (Order Items)",
     quantityShort: "qty",
+    sellerProfileNotFound: "Seller not found.",
+    loadSellerProfileError: "Unable to load seller page.",
     productNotFound: "Product not found.",
     back: "Back",
     categoryLabel: "Category",

@@ -4,7 +4,7 @@ from django.test import TestCase, override_settings
 from rest_framework import status
 from rest_framework.test import APIClient
 
-from accounts.models import User
+from accounts.models import User, UserProfile
 from catalog.models import Category, Product
 from catalog.serializers import ProductSerializer
 from orders.services import create_checkout_order
@@ -96,6 +96,67 @@ class ProductSerializerMediaTests(TestCase):
         )
 
 
+class ProductSerializerNicknameTests(TestCase):
+    def setUp(self):
+        self.category, _ = Category.objects.get_or_create(name="Games")
+
+    def test_product_serializer_uses_profile_nickname_when_present(self):
+        seller = User.objects.create_user(
+            email="seller@example.com",
+            password="password123",
+        )
+        UserProfile.objects.create(user=seller, nickname="PixelTrader")
+        product = Product.objects.create(
+            title="Nickname Product",
+            description="Uses seller nickname",
+            price=Decimal("20.00"),
+            stock=1,
+            seller=seller,
+            category=self.category,
+        )
+
+        serialized = ProductSerializer(product).data
+
+        self.assertEqual(serialized["seller_nickname"], "PixelTrader")
+
+    def test_product_serializer_falls_back_to_seller_when_profile_missing(self):
+        seller = User.objects.create_user(
+            email="seller@example.com",
+            password="password123",
+        )
+        product = Product.objects.create(
+            title="No Profile Product",
+            description="No profile exists",
+            price=Decimal("20.00"),
+            stock=1,
+            seller=seller,
+            category=self.category,
+        )
+
+        serialized = ProductSerializer(product).data
+
+        self.assertEqual(serialized["seller_nickname"], "Seller")
+
+    def test_product_serializer_falls_back_to_seller_when_nickname_is_blank(self):
+        seller = User.objects.create_user(
+            email="seller@example.com",
+            password="password123",
+        )
+        UserProfile.objects.create(user=seller, nickname="")
+        product = Product.objects.create(
+            title="Blank Nickname Product",
+            description="Blank nickname",
+            price=Decimal("20.00"),
+            stock=1,
+            seller=seller,
+            category=self.category,
+        )
+
+        serialized = ProductSerializer(product).data
+
+        self.assertEqual(serialized["seller_nickname"], "Seller")
+
+
 class PublicCatalogVisibilityTests(TestCase):
     def setUp(self):
         self.client = APIClient()
@@ -136,6 +197,7 @@ class PublicCatalogVisibilityTests(TestCase):
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(len(response.data), 1)
         self.assertEqual(response.data[0]["id"], self.visible_product.id)
+        self.assertEqual(response.data[0]["seller_nickname"], "Seller")
 
     def test_public_product_detail_hides_inactive_product(self):
         inactive_product = Product.objects.filter(title="Inactive Product").get()

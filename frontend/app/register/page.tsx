@@ -9,21 +9,41 @@ import { apiFetch } from "@/lib/api";
 import { useLanguage } from "@/components/LanguageProvider";
 import { showToast } from "@/components/Toast";
 
+const NICKNAME_PATTERN = /^[A-Za-z0-9_.-]+$/;
+
 export default function RegisterPage() {
   const router = useRouter();
   const { messages } = useLanguage();
   const [email, setEmail] = useState("");
+  const [nickname, setNickname] = useState("");
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
-  const [passwordError, setPasswordError] = useState("");
+  const [formError, setFormError] = useState("");
   const [loading, setLoading] = useState(false);
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
-    setPasswordError("");
+    setFormError("");
+
+    const trimmedNickname = nickname.trim();
+
+    if (!trimmedNickname) {
+      setFormError(messages.nicknameRequired);
+      return;
+    }
+
+    if (trimmedNickname.length < 3 || trimmedNickname.length > 30) {
+      setFormError(messages.nicknameLengthError);
+      return;
+    }
+
+    if (!NICKNAME_PATTERN.test(trimmedNickname)) {
+      setFormError(messages.nicknameInvalidError);
+      return;
+    }
 
     if (password !== confirmPassword) {
-      setPasswordError(messages.passwordsDoNotMatch);
+      setFormError(messages.passwordsDoNotMatch);
       return;
     }
 
@@ -31,15 +51,15 @@ export default function RegisterPage() {
     try {
       await apiFetch("/auth/register", {
         method: "POST",
-        body: JSON.stringify({ email, password }),
+        body: JSON.stringify({ email, nickname: trimmedNickname, password }),
       });
       showToast(messages.accountCreated, "success");
       router.push("/login");
     } catch (err: unknown) {
-      showToast(
-        err instanceof Error ? err.message : messages.registrationFailed,
-        "error"
-      );
+      const message =
+        err instanceof Error ? err.message : messages.registrationFailed;
+      setFormError(message);
+      showToast(message, "error");
     } finally {
       setLoading(false);
     }
@@ -56,6 +76,20 @@ export default function RegisterPage() {
             required
             value={email}
             onChange={(e) => setEmail(e.target.value)}
+            className="w-full border border-gray-300 rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-orange-400"
+          />
+        </div>
+        <div>
+          <label className="block text-sm font-medium mb-1">
+            {messages.nickname}
+          </label>
+          <input
+            type="text"
+            required
+            minLength={3}
+            maxLength={30}
+            value={nickname}
+            onChange={(e) => setNickname(e.target.value)}
             className="w-full border border-gray-300 rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-orange-400"
           />
         </div>
@@ -84,8 +118,8 @@ export default function RegisterPage() {
             onChange={(e) => setConfirmPassword(e.target.value)}
             className="w-full border border-gray-300 rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-orange-400"
           />
-          {passwordError && (
-            <p className="text-red-500 text-sm mt-1">{passwordError}</p>
+          {formError && (
+            <p className="text-red-500 text-sm mt-1">{formError}</p>
           )}
         </div>
         <button

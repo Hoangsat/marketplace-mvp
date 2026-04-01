@@ -1,3 +1,4 @@
+from django.conf import settings
 from django.contrib.auth.models import AbstractBaseUser, PermissionsMixin
 from django.db import models
 from django.utils import timezone
@@ -50,3 +51,24 @@ class PayoutRequest(models.Model):
 
     def __str__(self) -> str:
         return f"PayoutRequest #{self.pk}"
+
+
+class UserProfile(models.Model):
+    user = models.OneToOneField(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        related_name="profile",
+    )
+    nickname = models.CharField(
+        max_length=50,
+        unique=True,
+        null=True,
+        blank=True,
+        help_text="Public seller nickname",
+    )
+
+    class Meta:
+        db_table = "user_profiles"
+
+    def __str__(self) -> str:
+        return self.nickname or self.user.email

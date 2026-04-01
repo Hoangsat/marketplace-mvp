@@ -22,7 +22,8 @@ function shouldAttachAuth(path: string, method?: string): boolean {
       normalizedPath === "/games" ||
       normalizedPath === "/offer-types" ||
       normalizedPath === "/products" ||
-      /^\/products\/\d+$/.test(normalizedPath)
+      /^\/products\/\d+$/.test(normalizedPath) ||
+      /^\/api\/sellers\/[^/]+$/.test(normalizedPath)
     ) {
       return false;
     }

@@ -3,6 +3,7 @@
 // app/products/[id]/page.tsx - Product detail with images + add to cart
 
 import Image from "next/image";
+import Link from "next/link";
 import { useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { useLanguage } from "@/components/LanguageProvider";
@@ -58,6 +59,11 @@ export default function ProductDetailPage() {
   }
 
   const activeImageUrl = resolveMediaUrl(product.images?.[activeImg]);
+  const hasSellerProfile =
+    !!product.seller_nickname && product.seller_nickname !== "Seller";
+  const sellerHref = hasSellerProfile
+    ? `/sellers/${encodeURIComponent(product.seller_nickname ?? "")}`
+    : null;
 
   return (
     <div className="max-w-4xl mx-auto">
@@ -119,6 +125,21 @@ export default function ProductDetailPage() {
           <p className="text-sm text-gray-500">
             {messages.categoryLabel}:{" "}
             <span className="font-medium">{product.category?.name}</span>
+          </p>
+          <p className="text-sm text-gray-500">
+            {messages.seller}:{" "}
+            {sellerHref ? (
+              <Link
+                href={sellerHref}
+                className="font-medium hover:text-orange-600 hover:underline"
+              >
+                {product.seller_nickname}
+              </Link>
+            ) : (
+              <span className="font-medium">
+                {product.seller_nickname || "Seller"}
+              </span>
+            )}
           </p>
           <p className="text-sm text-gray-500">
             {messages.stockLabel}:{" "}

@@ -125,7 +125,9 @@ class ProductCollectionView(APIView):
         return [permissions.AllowAny()]
 
     def get(self, request):
-        products = Product.objects.select_related("category").filter(
+        products = Product.objects.select_related(
+            "category", "seller", "seller__profile"
+        ).filter(
             is_active=True,
             stock__gt=0,
         )
@@ -219,7 +221,9 @@ class ProductCollectionView(APIView):
             seller=request.user,
             images=image_paths,
         )
-        product = Product.objects.select_related("category").get(pk=product.pk)
+        product = Product.objects.select_related(
+            "category", "seller", "seller__profile"
+        ).get(pk=product.pk)
         return Response(
             ProductSerializer(product, context={"request": request}).data,
             status=status.HTTP_201_CREATED,
@@ -236,7 +240,9 @@ class ProductDetailView(APIView):
         return [permissions.AllowAny()]
 
     def get(self, request, product_id):
-        product = Product.objects.select_related("category").filter(id=product_id).first()
+        product = Product.objects.select_related(
+            "category", "seller", "seller__profile"
+        ).filter(id=product_id).first()
         if not product:
             return _detail_response("Product not found", status.HTTP_404_NOT_FOUND)
         if not product.is_active:
@@ -270,7 +276,9 @@ class ProductDetailView(APIView):
 
         product.save()
         product.refresh_from_db()
-        product = Product.objects.select_related("category").get(pk=product.pk)
+        product = Product.objects.select_related(
+            "category", "seller", "seller__profile"
+        ).get(pk=product.pk)
         return Response(ProductSerializer(product, context={"request": request}).data)
 
     def delete(self, request, product_id):

@@ -5,13 +5,15 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 from rest_framework_simplejwt.tokens import AccessToken
 
+from catalog.models import Product
 from common.permissions import IsAuthenticatedSeller
 
-from .models import PayoutRequest, User
+from .models import PayoutRequest, User, UserProfile
 from .serializers import (
     LoginSerializer,
     PayoutRequestCreateSerializer,
     PayoutRequestSerializer,
+    PublicSellerProfileSerializer,
     RegisterSerializer,
     UserSerializer,
     UserUpdateSerializer,
@@ -28,11 +30,16 @@ class RegisterView(APIView):
             detail = next(iter(serializer.errors.values()))[0]
             return Response({"detail": str(detail)}, status=status.HTTP_400_BAD_REQUEST)
 
-        user = User.objects.create_user(
-            email=serializer.validated_data["email"],
-            password=serializer.validated_data["password"],
-            is_seller=serializer.validated_data.get("is_seller", True),
-        )
+        with transaction.atomic():
+            user = User.objects.create_user(
+                email=serializer.validated_data["email"],
+                password=serializer.validated_data["password"],
+                is_seller=serializer.validated_data.get("is_seller", True),
+            )
+            UserProfile.objects.create(
+                user=user,
+                nickname=serializer.validated_data["nickname"],
+            )
         return Response(UserSerializer(user).data, status=status.HTTP_201_CREATED)
 
 
@@ -111,3 +118,34 @@ class PayoutRequestView(APIView):
             PayoutRequestSerializer(payout_request).data,
             status=status.HTTP_201_CREATED,
         )
+
+
+class PublicSellerProfileView(APIView):
+    permission_classes = [permissions.AllowAny]
+
+    def get(self, request, nickname):
+        profile = UserProfile.objects.select_related("user").filter(
+            nickname=nickname,
+            user__is_seller=True,
+        ).first()
+        if not profile:
+            return Response(
+                {"detail": "Seller not found"},
+                status=status.HTTP_404_NOT_FOUND,
+            )
+
+        products = Product.objects.select_related(
+            "category", "seller", "seller__profile"
+        ).filter(
+            seller_id=profile.user_id,
+            is_active=True,
+            stock__gt=0,
+        )
+        data = PublicSellerProfileSerializer(
+            {
+                "nickname": profile.nickname,
+                "products": products,
+            },
+            context={"request": request},
+        ).data
+        return Response(data, status=status.HTTP_200_OK)

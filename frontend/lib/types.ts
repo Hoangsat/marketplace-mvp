@@ -28,8 +28,14 @@ export interface Product {
   stock: number;
   images: string[];
   seller_id: number;
+  seller_nickname?: string;
   category_id: number;
   category: Category;
+}
+
+export interface PublicSellerProfile {
+  nickname: string;
+  products: Product[];
 }
 
 export interface PaymentInstructions {

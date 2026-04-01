@@ -1,3 +1,4 @@
+from django.core.exceptions import ObjectDoesNotExist
 from rest_framework import serializers
 
 from common.media import normalize_media_urls
@@ -27,6 +28,7 @@ class ProductSerializer(serializers.ModelSerializer):
     price = serializers.FloatField(read_only=True)
     images = serializers.SerializerMethodField()
     seller_id = serializers.IntegerField(read_only=True)
+    seller_nickname = serializers.SerializerMethodField()
     category_id = serializers.IntegerField(read_only=True)
     category = CategorySerializer(read_only=True)
 
@@ -40,6 +42,7 @@ class ProductSerializer(serializers.ModelSerializer):
             "stock",
             "images",
             "seller_id",
+            "seller_nickname",
             "category_id",
             "category",
         )
@@ -47,6 +50,25 @@ class ProductSerializer(serializers.ModelSerializer):
     def get_images(self, obj):
         request = self.context.get("request")
         return normalize_media_urls(obj.images or [], request=request)
+
+    def get_seller_nickname(self, obj):
+        seller = getattr(obj, "seller", None)
+        if seller is None:
+            return "Seller"
+
+        try:
+            nickname = seller.profile.nickname
+        except ObjectDoesNotExist:
+            nickname = None
+
+        if isinstance(nickname, str) and nickname.strip():
+            return nickname.strip()
+
+        username = getattr(seller, "username", "")
+        if isinstance(username, str) and username.strip():
+            return username.strip()
+
+        return "Seller"
 
 
 class ProductCreateSerializer(serializers.Serializer):
