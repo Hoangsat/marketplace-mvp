@@ -9,7 +9,14 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 
 from common.permissions import IsAuthenticatedSeller
-from .models import Category, OfferType, Platform, Product
+from .models import (
+    Category,
+    OfferType,
+    Platform,
+    Product,
+    filter_publicly_available_products,
+    is_product_publicly_available,
+)
 from .serializers import (
     CategoryDetailSerializer,
     CategorySerializer,
@@ -205,9 +212,8 @@ class CategoryProductsView(APIView):
         if not category:
             return _detail_response("Category not found", status.HTTP_404_NOT_FOUND)
 
-        products = _catalog_product_queryset().filter(
+        products = filter_publicly_available_products(_catalog_product_queryset()).filter(
             category_id=category.id,
-            is_active=True,
             stock__gt=0,
         )
         return Response(
@@ -287,8 +293,7 @@ class ProductCollectionView(APIView):
         return [permissions.AllowAny()]
 
     def get(self, request):
-        products = _catalog_product_queryset().filter(
-            is_active=True,
+        products = filter_publicly_available_products(_catalog_product_queryset()).filter(
             stock__gt=0,
         )
 
@@ -424,7 +429,7 @@ class ProductDetailView(APIView):
         product = _catalog_product_queryset().filter(id=product_id).first()
         if not product:
             return _detail_response("Product not found", status.HTTP_404_NOT_FOUND)
-        if not product.is_active:
+        if not is_product_publicly_available(product):
             if not request.user.is_authenticated or product.seller_id != request.user.id:
                 return _detail_response("Product not found", status.HTTP_404_NOT_FOUND)
         return Response(ProductSerializer(product, context={"request": request}).data)
@@ -443,6 +448,7 @@ class ProductDetailView(APIView):
             )
 
         validated = serializer.validated_data
+        next_category = product.category
         next_platform = product.platform
         next_offer_type = product.offer_type
 
@@ -450,8 +456,23 @@ class ProductDetailView(APIView):
             next_platform, platform_error = _resolve_platform_from_data(validated)
             if platform_error:
                 return _detail_response(platform_error, status.HTTP_400_BAD_REQUEST)
-            if not next_platform:
+            resolved_platform_id = (
+                validated.get("platform_id")
+                if "platform_id" in validated
+                else validated.get("game_id")
+            )
+            if resolved_platform_id is not None and not next_platform:
                 return _detail_response("Platform not found", status.HTTP_404_NOT_FOUND)
+
+        if next_platform:
+            next_category = next_platform.category
+        elif "category_id" in validated:
+            next_category = _resolve_category(validated["category_id"])
+            if not next_category:
+                return _detail_response("Category not found", status.HTTP_404_NOT_FOUND)
+
+        if "offer_type_id" in validated and validated.get("offer_type_id") is not None and not next_platform:
+            return _detail_response("Platform is required", status.HTTP_400_BAD_REQUEST)
 
         if "offer_type_id" in validated:
             next_offer_type = _resolve_active_offer_type(
@@ -472,16 +493,12 @@ class ProductDetailView(APIView):
                 "Offer type is required for this platform",
                 status.HTTP_400_BAD_REQUEST,
             )
+        if not next_platform and _category_has_active_platforms(next_category):
+            return _detail_response("Platform is required", status.HTTP_400_BAD_REQUEST)
 
+        product.category = next_category
         product.platform = next_platform
         product.offer_type = next_offer_type
-        if product.platform_id:
-            product.category = product.platform.category
-        elif "category_id" in validated:
-            category = _resolve_category(validated["category_id"])
-            if not category:
-                return _detail_response("Category not found", status.HTTP_404_NOT_FOUND)
-            product.category = category
 
         for field in ("title", "description", "price", "stock"):
             if field in validated:

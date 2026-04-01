@@ -1,5 +1,6 @@
 from django.conf import settings
 from django.db import models
+from django.db.models import Q
 from django.utils.text import slugify
 
 
@@ -132,3 +133,22 @@ class Product(models.Model):
 
     def __str__(self) -> str:
         return self.title
+
+
+def filter_publicly_available_products(queryset):
+    return queryset.filter(is_active=True).filter(
+        Q(platform__isnull=True) | Q(platform__is_active=True),
+        Q(offer_type__isnull=True) | Q(offer_type__is_active=True),
+    )
+
+
+def is_product_publicly_available(product) -> bool:
+    if not product.is_active:
+        return False
+    if product.platform_id and (product.platform is None or not product.platform.is_active):
+        return False
+    if product.offer_type_id and (
+        product.offer_type is None or not product.offer_type.is_active
+    ):
+        return False
+    return True

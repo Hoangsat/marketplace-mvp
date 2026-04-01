@@ -175,6 +175,23 @@ class PublicCatalogVisibilityTests(TestCase):
             password="password123",
         )
         self.category, _ = Category.objects.get_or_create(name="Games")
+        self.active_platform = Platform.objects.create(
+            name="Steam",
+            slug="steam-public-visibility",
+            category=self.category,
+        )
+        self.inactive_platform = Platform.objects.create(
+            name="Lineage 2",
+            slug="lineage-2-hidden",
+            category=self.category,
+            is_active=False,
+        )
+        self.inactive_offer_type = OfferType.objects.create(
+            platform=self.active_platform,
+            name="Accounts",
+            slug="accounts-hidden",
+            is_active=False,
+        )
         self.visible_product = Product.objects.create(
             title="Visible Product",
             description="In stock and active",
@@ -182,6 +199,25 @@ class PublicCatalogVisibilityTests(TestCase):
             stock=2,
             seller=self.seller,
             category=self.category,
+        )
+        Product.objects.create(
+            title="Inactive Platform Product",
+            description="Platform is inactive",
+            price=Decimal("16.00"),
+            stock=2,
+            seller=self.seller,
+            category=self.category,
+            platform=self.inactive_platform,
+        )
+        Product.objects.create(
+            title="Inactive Offer Type Product",
+            description="Offer type is inactive",
+            price=Decimal("17.00"),
+            stock=2,
+            seller=self.seller,
+            category=self.category,
+            platform=self.active_platform,
+            offer_type=self.inactive_offer_type,
         )
         Product.objects.create(
             title="Sold Out Product",
@@ -209,10 +245,32 @@ class PublicCatalogVisibilityTests(TestCase):
         self.assertEqual(response.data[0]["id"], self.visible_product.id)
         self.assertEqual(response.data[0]["seller_nickname"], "Seller")
 
+    def test_category_products_endpoint_hides_products_under_inactive_nodes(self):
+        response = self.client.get(f"/api/catalog/categories/{self.category.slug}/products")
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual([product["id"] for product in response.data], [self.visible_product.id])
+
     def test_public_product_detail_hides_inactive_product(self):
         inactive_product = Product.objects.filter(title="Inactive Product").get()
 
         response = self.client.get(f"/products/{inactive_product.id}")
+
+        self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
+        self.assertEqual(response.json()["detail"], "Product not found")
+
+    def test_public_product_detail_hides_product_under_inactive_platform(self):
+        product = Product.objects.get(title="Inactive Platform Product")
+
+        response = self.client.get(f"/products/{product.id}")
+
+        self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
+        self.assertEqual(response.json()["detail"], "Product not found")
+
+    def test_public_product_detail_hides_product_under_inactive_offer_type(self):
+        product = Product.objects.get(title="Inactive Offer Type Product")
+
+        response = self.client.get(f"/products/{product.id}")
 
         self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
         self.assertEqual(response.json()["detail"], "Product not found")
@@ -519,3 +577,112 @@ class PlatformCatalogApiTests(TestCase):
         self.steam_product.refresh_from_db()
         self.assertEqual(self.steam_product.platform_id, telegram.id)
         self.assertIsNone(self.steam_product.offer_type_id)
+
+    def test_update_category_only_product_in_terminal_category_succeeds_without_platform(self):
+        self.client.force_authenticate(user=self.seller)
+        terminal_category = Category.objects.create(
+            name="Terminal Updates",
+            slug="terminal-updates",
+        )
+        category_only_product = Product.objects.create(
+            title="Category-only product",
+            description="No platform needed",
+            price=Decimal("12.00"),
+            stock=2,
+            seller=self.seller,
+            category=terminal_category,
+        )
+
+        response = self.client.put(
+            f"/products/{category_only_product.id}",
+            {
+                "title": "Updated category-only product",
+                "description": category_only_product.description,
+                "price": str(category_only_product.price),
+                "stock": category_only_product.stock,
+                "category_id": terminal_category.id,
+                "platform_id": None,
+                "offer_type_id": None,
+            },
+            format="json",
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        category_only_product.refresh_from_db()
+        self.assertEqual(category_only_product.title, "Updated category-only product")
+        self.assertEqual(category_only_product.category_id, terminal_category.id)
+        self.assertIsNone(category_only_product.platform_id)
+        self.assertIsNone(category_only_product.offer_type_id)
+
+    def test_update_product_to_category_with_active_platforms_and_no_platform_fails(self):
+        self.client.force_authenticate(user=self.seller)
+        terminal_category = Category.objects.create(
+            name="Terminal Reassignment",
+            slug="terminal-reassignment",
+        )
+        category_only_product = Product.objects.create(
+            title="Terminal listing",
+            description="Starts category only",
+            price=Decimal("14.00"),
+            stock=2,
+            seller=self.seller,
+            category=terminal_category,
+        )
+
+        response = self.client.put(
+            f"/products/{category_only_product.id}",
+            {
+                "title": category_only_product.title,
+                "description": category_only_product.description,
+                "price": str(category_only_product.price),
+                "stock": category_only_product.stock,
+                "category_id": self.games_category.id,
+                "platform_id": None,
+                "offer_type_id": None,
+            },
+            format="json",
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertEqual(response.json()["detail"], "Platform is required")
+
+    def test_update_platform_based_product_still_works(self):
+        self.client.force_authenticate(user=self.seller)
+
+        response = self.client.put(
+            f"/products/{self.steam_product.id}",
+            {
+                "title": "Updated Steam account",
+                "description": self.steam_product.description,
+                "price": str(self.steam_product.price),
+                "stock": self.steam_product.stock,
+                "platform_id": self.steam.id,
+                "offer_type_id": self.steam_accounts.id,
+            },
+            format="json",
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.steam_product.refresh_from_db()
+        self.assertEqual(self.steam_product.title, "Updated Steam account")
+        self.assertEqual(self.steam_product.platform_id, self.steam.id)
+        self.assertEqual(self.steam_product.offer_type_id, self.steam_accounts.id)
+
+    def test_update_with_offer_type_without_matching_platform_fails(self):
+        self.client.force_authenticate(user=self.seller)
+
+        response = self.client.put(
+            f"/products/{self.steam_product.id}",
+            {
+                "title": self.steam_product.title,
+                "description": self.steam_product.description,
+                "price": str(self.steam_product.price),
+                "stock": self.steam_product.stock,
+                "platform_id": self.steam.id,
+                "offer_type_id": self.chatgpt_accounts.id,
+            },
+            format="json",
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
+        self.assertEqual(response.json()["detail"], "Offer type not found")

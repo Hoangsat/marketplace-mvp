@@ -83,12 +83,22 @@ export default function EditProductPage() {
       .finally(() => setLoading(false));
   }, [id, router]);
 
+  const selectedCategoryId = Number(form.category_id);
+  const availablePlatforms = form.category_id
+    ? platforms.filter((platform) => platform.category_id === selectedCategoryId)
+    : platforms;
+  const categoryHasPlatforms = availablePlatforms.length > 0;
+  const categoryIsLocked = Boolean(form.platform_id);
+
   useEffect(() => {
     const platformId = Number(form.platform_id);
     const platform = platforms.find((item) => item.id === platformId);
     if (!platform) {
       setOfferTypes([]);
       setPlatformUsesOfferTypes(false);
+      if (form.offer_type_id) {
+        setForm((current) => ({ ...current, offer_type_id: "" }));
+      }
       return;
     }
 
@@ -147,7 +157,7 @@ export default function EditProductPage() {
           price: parseFloat(form.price),
           stock: parseInt(form.stock),
           category_id: parseInt(form.category_id),
-          platform_id: parseInt(form.platform_id),
+          platform_id: form.platform_id ? parseInt(form.platform_id) : null,
           offer_type_id: form.offer_type_id ? parseInt(form.offer_type_id) : null,
         }),
       });
@@ -216,7 +226,20 @@ export default function EditProductPage() {
           </Field>
         </div>
         <Field label={messages.categoryLabel}>
-          <select required value={form.category_id} className={input} disabled>
+          <select
+            required
+            value={form.category_id}
+            onChange={(event) => {
+              setForm((current) => ({
+                ...current,
+                category_id: event.target.value,
+                platform_id: "",
+                offer_type_id: "",
+              }));
+            }}
+            className={input}
+            disabled={categoryIsLocked}
+          >
             <option value="">{messages.selectCategory}</option>
             {categories.map((category) => (
               <option key={category.id} value={category.id}>
@@ -224,17 +247,41 @@ export default function EditProductPage() {
               </option>
             ))}
           </select>
-          <p className="mt-1 text-xs text-gray-500">{messages.categoryAutoAssigned}</p>
+          {categoryIsLocked && (
+            <p className="mt-1 text-xs text-gray-500">{messages.categoryAutoAssigned}</p>
+          )}
         </Field>
         <Field label={messages.selectedGameLabel}>
           <select
-            required
+            required={categoryHasPlatforms}
             value={form.platform_id}
-            onChange={(event) => set("platform_id", event.target.value)}
+            onChange={(event) => {
+              const nextPlatformId = event.target.value;
+              if (!nextPlatformId) {
+                setForm((current) => ({
+                  ...current,
+                  platform_id: "",
+                  offer_type_id: "",
+                }));
+                return;
+              }
+
+              const nextPlatform = availablePlatforms.find(
+                (platform) => String(platform.id) === nextPlatformId
+              );
+              setForm((current) => ({
+                ...current,
+                category_id: nextPlatform
+                  ? String(nextPlatform.category_id)
+                  : current.category_id,
+                platform_id: nextPlatformId,
+                offer_type_id: "",
+              }));
+            }}
             className={input}
           >
             <option value="">{messages.chooseGame}</option>
-            {platforms.map((platform) => (
+            {availablePlatforms.map((platform) => (
               <option key={platform.id} value={platform.id}>
                 {getPlatformName(platform, language)}
               </option>

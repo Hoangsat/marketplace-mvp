@@ -143,8 +143,8 @@ class ProductUpdateSerializer(serializers.Serializer):
     price = serializers.DecimalField(max_digits=12, decimal_places=2, required=False)
     stock = serializers.IntegerField(required=False)
     category_id = serializers.IntegerField(required=False)
-    platform_id = serializers.IntegerField(required=False)
-    game_id = serializers.IntegerField(required=False)
+    platform_id = serializers.IntegerField(required=False, allow_null=True)
+    game_id = serializers.IntegerField(required=False, allow_null=True)
     offer_type_id = serializers.IntegerField(required=False, allow_null=True)
 
     def validate_price(self, value):

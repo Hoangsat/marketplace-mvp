@@ -5,7 +5,7 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 from rest_framework_simplejwt.tokens import AccessToken
 
-from catalog.models import Product
+from catalog.models import Product, filter_publicly_available_products
 from common.permissions import IsAuthenticatedSeller
 
 from .models import PayoutRequest, User, UserProfile
@@ -134,16 +134,17 @@ class PublicSellerProfileView(APIView):
                 status=status.HTTP_404_NOT_FOUND,
             )
 
-        products = Product.objects.select_related(
-            "category",
-            "platform",
-            "platform__category",
-            "offer_type",
-            "seller",
-            "seller__profile",
+        products = filter_publicly_available_products(
+            Product.objects.select_related(
+                "category",
+                "platform",
+                "platform__category",
+                "offer_type",
+                "seller",
+                "seller__profile",
+            )
         ).filter(
             seller_id=profile.user_id,
-            is_active=True,
             stock__gt=0,
         )
         data = PublicSellerProfileSerializer(

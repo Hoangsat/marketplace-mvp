@@ -8,7 +8,7 @@ from django.utils import timezone
 from rest_framework import status
 from rest_framework.exceptions import APIException
 
-from catalog.models import Product
+from catalog.models import Product, filter_publicly_available_products
 
 from .models import Order, OrderItem, SellerTransaction
 
@@ -36,9 +36,8 @@ def create_checkout_order(*, buyer, items):
 
     products = {
         product.id: product
-        for product in Product.objects.filter(
-            id__in=requested_quantities.keys(),
-            is_active=True,
+        for product in filter_publicly_available_products(
+            Product.objects.filter(id__in=requested_quantities.keys())
         )
     }
     products_to_buy = []

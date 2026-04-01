@@ -138,9 +138,6 @@ export default function CategoryPage() {
                     <p className="text-base font-semibold text-gray-900 transition-colors group-hover:text-orange-700">
                       {platform.name}
                     </p>
-                    <p className="mt-1 text-xs uppercase tracking-[0.18em] text-gray-500">
-                      {platform.slug}
-                    </p>
                   </Link>
                 ))}
               </div>

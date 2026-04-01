@@ -16,11 +16,11 @@ def root(_request):
 
 
 urlpatterns = [
-    path("admin/", admin.site.urls),
     path("", root, name="root"),
     path("", include("accounts.urls")),
     path("", include("catalog.urls")),
     path("", include("orders.urls")),
+    path("admin/", admin.site.urls),
 ]
 
 if settings.DEBUG and settings.MEDIA_STORAGE_BACKEND == "filesystem":

@@ -5,7 +5,7 @@ from rest_framework import status
 from rest_framework.test import APIClient
 
 from accounts.models import PayoutRequest, User, UserProfile
-from catalog.models import Category, Product
+from catalog.models import Category, OfferType, Platform, Product
 
 
 class LoginViewTests(TestCase):
@@ -148,6 +148,23 @@ class PublicSellerProfileViewTests(TestCase):
             password="password123",
         )
         UserProfile.objects.create(user=seller, nickname="market_seller")
+        active_platform = Platform.objects.create(
+            name="Steam",
+            slug="steam-profile-visible",
+            category=self.category,
+        )
+        inactive_platform = Platform.objects.create(
+            name="Lineage 2",
+            slug="lineage-2-profile-hidden",
+            category=self.category,
+            is_active=False,
+        )
+        inactive_offer_type = OfferType.objects.create(
+            platform=active_platform,
+            name="Accounts",
+            slug="accounts-profile-hidden",
+            is_active=False,
+        )
         Product.objects.create(
             title="Visible Product",
             description="Visible",
@@ -155,6 +172,27 @@ class PublicSellerProfileViewTests(TestCase):
             stock=3,
             seller=seller,
             category=self.category,
+            is_active=True,
+        )
+        Product.objects.create(
+            title="Inactive Platform Product",
+            description="Hidden by inactive platform",
+            price=Decimal("10.50"),
+            stock=3,
+            seller=seller,
+            category=self.category,
+            platform=inactive_platform,
+            is_active=True,
+        )
+        Product.objects.create(
+            title="Inactive Offer Type Product",
+            description="Hidden by inactive offer type",
+            price=Decimal("10.75"),
+            stock=3,
+            seller=seller,
+            category=self.category,
+            platform=active_platform,
+            offer_type=inactive_offer_type,
             is_active=True,
         )
         Product.objects.create(

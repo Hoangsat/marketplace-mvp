@@ -7,7 +7,7 @@ from rest_framework import status
 from rest_framework.test import APIClient
 
 from accounts.models import User
-from catalog.models import Category, Product
+from catalog.models import Category, OfferType, Platform, Product
 from orders.admin import OrderAdmin
 from orders.models import Order, OrderItem, SellerTransaction
 from orders.serializers import OrderSerializer
@@ -99,6 +99,74 @@ class CheckoutFlowTests(TestCase):
         self.assertEqual(
             response.json()["detail"],
             f"Product {self.product_one.id} not found",
+        )
+        self.assertFalse(Order.objects.filter(buyer=self.buyer).exists())
+
+    def test_checkout_rejects_product_under_inactive_platform(self):
+        inactive_platform = Platform.objects.create(
+            name="Lineage 2",
+            slug="lineage-2-checkout-hidden",
+            category=self.category,
+            is_active=False,
+        )
+        hidden_product = Product.objects.create(
+            title="Inactive Platform Product",
+            description="Hidden in checkout",
+            price=Decimal("19.00"),
+            stock=2,
+            seller=self.seller_one,
+            category=self.category,
+            platform=inactive_platform,
+        )
+        self.client.force_authenticate(user=self.buyer)
+
+        response = self.client.post(
+            "/orders/checkout",
+            {"items": [{"product_id": hidden_product.id, "quantity": 1}]},
+            format="json",
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
+        self.assertEqual(
+            response.json()["detail"],
+            f"Product {hidden_product.id} not found",
+        )
+        self.assertFalse(Order.objects.filter(buyer=self.buyer).exists())
+
+    def test_checkout_rejects_product_under_inactive_offer_type(self):
+        active_platform = Platform.objects.create(
+            name="Steam",
+            slug="steam-checkout-visible",
+            category=self.category,
+        )
+        inactive_offer_type = OfferType.objects.create(
+            platform=active_platform,
+            name="Accounts",
+            slug="accounts-checkout-hidden",
+            is_active=False,
+        )
+        hidden_product = Product.objects.create(
+            title="Inactive Offer Type Product",
+            description="Hidden in checkout",
+            price=Decimal("20.00"),
+            stock=2,
+            seller=self.seller_one,
+            category=self.category,
+            platform=active_platform,
+            offer_type=inactive_offer_type,
+        )
+        self.client.force_authenticate(user=self.buyer)
+
+        response = self.client.post(
+            "/orders/checkout",
+            {"items": [{"product_id": hidden_product.id, "quantity": 1}]},
+            format="json",
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
+        self.assertEqual(
+            response.json()["detail"],
+            f"Product {hidden_product.id} not found",
         )
         self.assertFalse(Order.objects.filter(buyer=self.buyer).exists())
 

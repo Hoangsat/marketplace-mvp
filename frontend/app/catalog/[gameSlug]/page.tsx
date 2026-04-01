@@ -138,12 +138,11 @@ export default function CatalogPlatformPage() {
               <Link
                 key={offerType.id}
                 href={`/catalog/${platform.slug}/${offerType.slug}`}
-                className="group block cursor-pointer rounded-xl border border-gray-200 bg-white p-4 shadow-sm transition-all duration-200 hover:-translate-y-0.5 hover:border-orange-200 hover:shadow-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-orange-400/70"
+                className="group block cursor-pointer rounded-2xl border border-gray-200 bg-gray-50 p-4 text-sm font-medium text-gray-700 shadow-sm transition-all duration-200 hover:-translate-y-0.5 hover:border-orange-300 hover:shadow-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-orange-400/70"
               >
                 <p className="text-base font-semibold text-gray-900 transition-colors group-hover:text-orange-700">
                   {getOfferTypeName(offerType, language)}
                 </p>
-                <p className="mt-1 text-xs text-gray-500">{offerType.name}</p>
               </Link>
             ))}
             </div>

@@ -60,13 +60,10 @@ export default function GameCatalogGrid() {
               <Link
                 key={category.id}
                 href={`/categories/${category.slug}`}
-                className="group block cursor-pointer rounded-3xl border border-gray-200 bg-white p-6 shadow-sm transition-all duration-200 hover:-translate-y-1 hover:border-orange-200 hover:shadow-lg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-orange-400/70"
+                className="group block cursor-pointer rounded-2xl border border-gray-200 bg-gray-50 p-4 text-sm font-medium text-gray-700 shadow-sm transition-all duration-200 hover:-translate-y-0.5 hover:border-orange-300 hover:shadow-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-orange-400/70"
               >
-                <p className="text-xl font-semibold text-gray-900 transition-colors group-hover:text-orange-700">
+                <p className="text-base font-semibold text-gray-900 transition-colors group-hover:text-orange-700">
                   {category.name}
-                </p>
-                <p className="mt-2 text-sm text-gray-500">
-                  {category.slug.replace(/-/g, " ")}
                 </p>
               </Link>
             ))}
