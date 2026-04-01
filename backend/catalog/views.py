@@ -2,7 +2,7 @@ from decimal import Decimal, InvalidOperation
 import uuid
 
 from django.core.files.storage import default_storage
-from django.db.models import Count, ProtectedError, Q
+from django.db.models import ProtectedError
 from rest_framework import permissions, status
 from rest_framework.parsers import FormParser, JSONParser, MultiPartParser
 from rest_framework.response import Response
@@ -129,6 +129,12 @@ def _resolve_create_category(validated_data, platform):
     return _resolve_category(category_id)
 
 
+def _category_has_active_platforms(category):
+    if category is None:
+        return False
+    return Platform.objects.filter(category_id=category.id, is_active=True).exists()
+
+
 def _category_queryset():
     return Category.objects.filter(parent__isnull=True)
 
@@ -184,17 +190,10 @@ class CategoryPlatformListView(APIView):
         if not category:
             return _detail_response("Category not found", status.HTTP_404_NOT_FOUND)
 
-        platforms = (
-            Platform.objects.filter(category_id=category.id, is_active=True)
-            .annotate(
-                product_count=Count(
-                    "products",
-                    filter=Q(products__is_active=True, products__stock__gt=0),
-                )
-            )
-            .filter(product_count__gt=0)
-            .order_by("name", "id")
-        )
+        platforms = Platform.objects.filter(
+            category_id=category.id,
+            is_active=True,
+        ).order_by("name", "id")
         return Response(PlatformSerializer(platforms, many=True).data)
 
 
@@ -355,6 +354,17 @@ class ProductCollectionView(APIView):
         ) and not platform:
             return _detail_response("Platform not found", status.HTTP_404_NOT_FOUND)
 
+        category = _resolve_create_category(serializer.validated_data, platform)
+        if not category and "category_id" not in serializer.validated_data and not platform:
+            return _detail_response(
+                "Category is required", status.HTTP_400_BAD_REQUEST
+            )
+        if not category:
+            return _detail_response("Category not found", status.HTTP_404_NOT_FOUND)
+
+        if "offer_type_id" in serializer.validated_data and not platform:
+            return _detail_response("Platform is required", status.HTTP_400_BAD_REQUEST)
+
         offer_type = _resolve_active_offer_type(
             serializer.validated_data.get("offer_type_id"),
             platform=platform,
@@ -364,25 +374,18 @@ class ProductCollectionView(APIView):
                 "Offer type not found", status.HTTP_404_NOT_FOUND
             )
         if not platform:
-            return _detail_response("Platform is required", status.HTTP_400_BAD_REQUEST)
+            if _category_has_active_platforms(category):
+                return _detail_response("Platform is required", status.HTTP_400_BAD_REQUEST)
         if _platform_has_active_offer_types(platform) and not offer_type:
             return _detail_response(
                 "Offer type is required for this platform",
                 status.HTTP_400_BAD_REQUEST,
-            )
-
-        category = _resolve_create_category(serializer.validated_data, platform)
-        if not category and "category_id" not in serializer.validated_data and not platform:
-            return _detail_response(
-                "Category is required", status.HTTP_400_BAD_REQUEST
             )
         if platform and category and platform.category_id != category.id:
             return _detail_response(
                 "Category does not match the selected platform",
                 status.HTTP_400_BAD_REQUEST,
             )
-        if not category:
-            return _detail_response("Category not found", status.HTTP_404_NOT_FOUND)
 
         files = request.FILES.getlist("images")
         try:

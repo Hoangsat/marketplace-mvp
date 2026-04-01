@@ -50,7 +50,8 @@ export default function NewProductPageClient() {
 
   const platformSlug = searchParams.get("platform") || searchParams.get("game");
   const offerTypeSlug = searchParams.get("offerType");
-  const hasCatalogQuery = Boolean(platformSlug || offerTypeSlug);
+  const categorySlug = searchParams.get("category");
+  const hasCatalogQuery = Boolean(platformSlug || offerTypeSlug || categorySlug);
 
   useEffect(() => {
     if (!getToken()) {
@@ -77,7 +78,7 @@ export default function NewProductPageClient() {
             ? categoriesData.find(
                 (category) => category.id === resolvedPlatform.category_id
               ) ?? null
-            : null;
+            : categoriesData.find((category) => category.slug === categorySlug) ?? null;
         const resolvedOfferTypes = platformDetail?.offer_types ?? [];
         const resolvedOfferType =
           resolvedOfferTypes.find((offerType) => offerType.slug === offerTypeSlug) ??
@@ -117,7 +118,7 @@ export default function NewProductPageClient() {
     return () => {
       isCancelled = true;
     };
-  }, [offerTypeSlug, platformSlug, router]);
+  }, [categorySlug, offerTypeSlug, platformSlug, router]);
 
   useEffect(() => {
     const platformId = Number(form.platform_id);
@@ -126,7 +127,11 @@ export default function NewProductPageClient() {
 
     if (!nextPlatform) {
       setSelectedPlatform(null);
-      setSelectedCategory(null);
+      const fallbackCategory =
+        categories.find((category) => category.id === Number(form.category_id)) ??
+        categories.find((category) => category.slug === categorySlug) ??
+        null;
+      setSelectedCategory(fallbackCategory);
       setSelectedOfferType(null);
       setOfferTypes([]);
       setPlatformUsesOfferTypes(false);
@@ -183,7 +188,16 @@ export default function NewProductPageClient() {
     return () => {
       isCancelled = true;
     };
-  }, [categories, form.offer_type_id, form.platform_id, offerTypes.length, platforms, selectedPlatform?.id]);
+  }, [
+    categories,
+    categorySlug,
+    form.category_id,
+    form.offer_type_id,
+    form.platform_id,
+    offerTypes.length,
+    platforms,
+    selectedPlatform?.id,
+  ]);
 
   function set(field: string, value: string) {
     setForm((currentForm) => ({ ...currentForm, [field]: value }));
@@ -300,7 +314,21 @@ export default function NewProductPageClient() {
           </Field>
         </div>
         <Field label={messages.categoryLabel}>
-          <select required value={form.category_id} className={input} disabled>
+          <select
+            required
+            value={form.category_id}
+            onChange={(event) => {
+              const nextCategoryId = event.target.value;
+              set("category_id", nextCategoryId);
+              setSelectedCategory(
+                categories.find(
+                  (category) => category.id === Number(nextCategoryId)
+                ) ?? null
+              );
+            }}
+            className={input}
+            disabled={Boolean(selectedPlatform)}
+          >
             <option value="">{messages.selectCategory}</option>
             {categories.map((category) => (
               <option key={category.id} value={category.id}>
@@ -311,7 +339,6 @@ export default function NewProductPageClient() {
         </Field>
         <Field label={messages.selectedGameLabel}>
           <select
-            required
             value={form.platform_id}
             onChange={(event) => set("platform_id", event.target.value)}
             className={input}

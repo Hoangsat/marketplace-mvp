@@ -7,7 +7,6 @@ import { useParams } from "next/navigation";
 import { apiFetch } from "@/lib/api";
 import { useLanguage } from "@/components/LanguageProvider";
 import ProductCard from "@/components/ProductCard";
-import { getToken } from "@/lib/auth";
 import { OfferType, Platform, Product } from "@/lib/types";
 import { Language } from "@/lib/i18n";
 
@@ -36,14 +35,6 @@ export default function CatalogOfferTypePage() {
   const [products, setProducts] = useState<Product[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(false);
-  const [canSell, setCanSell] = useState(false);
-
-  useEffect(() => {
-    const timeoutId = window.setTimeout(() => {
-      setCanSell(!!getToken());
-    }, 0);
-    return () => window.clearTimeout(timeoutId);
-  }, []);
 
   useEffect(() => {
     Promise.all([
@@ -115,7 +106,7 @@ export default function CatalogOfferTypePage() {
               {messages.browseProductsForSelection}
             </p>
           </div>
-          {canSell && platform && offerType && (
+          {platform && offerType && (
             <Link
               href={`/seller/products/new?platform=${platform.slug}&offerType=${offerType.slug}`}
               className="inline-flex items-center justify-center rounded-xl bg-orange-600 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-orange-700"

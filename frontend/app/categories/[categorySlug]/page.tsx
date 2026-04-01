@@ -75,6 +75,8 @@ export default function CategoryPage() {
     };
   }, [categorySlug]);
 
+  const isTerminalCategory = !platforms || platforms.length === 0;
+
   return (
     <div className="space-y-6">
       <section className="rounded-3xl border border-slate-800 bg-slate-950 p-6 text-slate-100 shadow-xl">
@@ -85,13 +87,23 @@ export default function CategoryPage() {
           {messages.backToCatalog}
         </Link>
 
-        <div className="mt-4">
-          <p className="text-sm uppercase tracking-[0.2em] text-slate-400">
-            {messages.categoryLabel}
-          </p>
-          <h1 className="mt-2 text-3xl font-bold tracking-tight">
-            {category?.name ?? categorySlug}
-          </h1>
+        <div className="mt-4 flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
+          <div>
+            <p className="text-sm uppercase tracking-[0.2em] text-slate-400">
+              {messages.categoryLabel}
+            </p>
+            <h1 className="mt-2 text-3xl font-bold tracking-tight">
+              {category?.name ?? categorySlug}
+            </h1>
+          </div>
+          {!loading && !notFound && !error && category && isTerminalCategory && (
+            <Link
+              href={`/seller/products/new?category=${category.slug}`}
+              className="inline-flex items-center justify-center rounded-xl bg-orange-600 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-orange-700"
+            >
+              {messages.sellInThisCategory}
+            </Link>
+          )}
         </div>
       </section>
 

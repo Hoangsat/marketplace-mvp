@@ -404,6 +404,95 @@ class PlatformCatalogApiTests(TestCase):
         self.assertEqual(created.platform_id, telegram.id)
         self.assertIsNone(created.offer_type_id)
 
+    def test_create_product_with_category_only_is_allowed_for_terminal_category(self):
+        self.client.force_authenticate(user=self.seller)
+        terminal_category = Category.objects.create(
+            name="Terminal Services",
+            slug="terminal-services",
+        )
+
+        response = self.client.post(
+            "/products",
+            {
+                "title": "Premium app subscription",
+                "description": "Category-only listing",
+                "price": "8.00",
+                "stock": 3,
+                "category_id": terminal_category.id,
+            },
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+        created = Product.objects.get(id=response.json()["id"])
+        self.assertEqual(created.category_id, terminal_category.id)
+        self.assertIsNone(created.platform_id)
+        self.assertIsNone(created.offer_type_id)
+
+    def test_create_product_with_category_only_fails_when_category_has_platforms(self):
+        self.client.force_authenticate(user=self.seller)
+
+        response = self.client.post(
+            "/products",
+            {
+                "title": "Games listing without platform",
+                "description": "Should fail",
+                "price": "7.00",
+                "stock": 2,
+                "category_id": self.games_category.id,
+            },
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertEqual(response.json()["detail"], "Platform is required")
+
+    def test_create_product_with_platform_still_works(self):
+        self.client.force_authenticate(user=self.seller)
+        telegram = Platform.objects.create(
+            name="Telegram Direct",
+            slug="telegram-direct",
+            display_name_vi="Telegram",
+            category=self.software_category,
+        )
+
+        response = self.client.post(
+            "/products",
+            {
+                "title": "Telegram direct listing",
+                "description": "Platform-based listing",
+                "price": "17.00",
+                "stock": 2,
+                "platform_id": telegram.id,
+            },
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+        created = Product.objects.get(id=response.json()["id"])
+        self.assertEqual(created.platform_id, telegram.id)
+        self.assertEqual(created.category_id, self.software_category.id)
+        self.assertIsNone(created.offer_type_id)
+
+    def test_create_product_with_offer_type_but_no_platform_fails(self):
+        self.client.force_authenticate(user=self.seller)
+        terminal_category = Category.objects.create(
+            name="Terminal Services 2",
+            slug="terminal-services-2",
+        )
+
+        response = self.client.post(
+            "/products",
+            {
+                "title": "Broken category listing",
+                "description": "Offer type without platform",
+                "price": "9.00",
+                "stock": 1,
+                "category_id": terminal_category.id,
+                "offer_type_id": self.steam_accounts.id,
+            },
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertEqual(response.json()["detail"], "Platform is required")
+
     def test_update_product_can_clear_offer_type_when_platform_has_no_offer_types(self):
         self.client.force_authenticate(user=self.seller)
         telegram = Platform.objects.create(
