@@ -5,9 +5,10 @@ import { useEffect, useState } from "react";
 import { useParams } from "next/navigation";
 
 import { apiFetch } from "@/lib/api";
+import CatalogBreadcrumbs from "@/components/CatalogBreadcrumbs";
 import { useLanguage } from "@/components/LanguageProvider";
 import ProductCard from "@/components/ProductCard";
-import { OfferType, PlatformDetail, Product } from "@/lib/types";
+import { Category, OfferType, PlatformDetail, Product } from "@/lib/types";
 import { Language } from "@/lib/i18n";
 
 function getPlatformName(platform: PlatformDetail, language: Language) {
@@ -27,14 +28,18 @@ function getOfferTypeName(offerType: OfferType, language: Language) {
 export default function CatalogPlatformPage() {
   const { gameSlug } = useParams<{ gameSlug: string }>();
   const { language, messages } = useLanguage();
+  const [category, setCategory] = useState<Category | null>(null);
   const [platform, setPlatform] = useState<PlatformDetail | null>(null);
   const [products, setProducts] = useState<Product[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(false);
 
   useEffect(() => {
-    apiFetch<PlatformDetail>(`/platforms/${encodeURIComponent(gameSlug)}`)
-      .then(async (platformData) => {
+    Promise.all([
+      apiFetch<PlatformDetail>(`/platforms/${encodeURIComponent(gameSlug)}`),
+      apiFetch<Category[]>("/categories"),
+    ])
+      .then(async ([platformData, categories]) => {
         if (!platformData.has_offer_types) {
           const productData = await apiFetch<Product[]>(
             `/products?platform=${encodeURIComponent(platformData.slug)}`
@@ -43,10 +48,14 @@ export default function CatalogPlatformPage() {
         } else {
           setProducts([]);
         }
+        setCategory(
+          categories.find((item) => item.id === platformData.category_id) ?? null
+        );
         setPlatform(platformData);
         setError(false);
       })
       .catch(() => {
+        setCategory(null);
         setPlatform(null);
         setProducts([]);
         setError(true);
@@ -57,16 +66,28 @@ export default function CatalogPlatformPage() {
   const offerTypes = platform?.offer_types ?? [];
 
   return (
-    <div className="space-y-6">
-      <div className="rounded-2xl border border-gray-200 bg-white p-6 shadow-sm">
+    <div className="space-y-5">
+      <div className="rounded-2xl border border-gray-200 bg-white p-5 shadow-sm">
         <Link
           href="/catalog"
           className="text-sm font-medium text-orange-600 hover:underline"
         >
           {messages.backToCatalog}
         </Link>
-        <div className="mt-4 flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
+        <div className="mt-3 flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
           <div>
+            <CatalogBreadcrumbs
+              items={[
+                { label: messages.catalog, href: "/catalog" },
+                ...(category
+                  ? [{ label: category.name, href: `/categories/${category.slug}` }]
+                  : []),
+                {
+                  label: platform ? getPlatformName(platform, language) : gameSlug,
+                },
+              ]}
+              className="text-gray-500"
+            />
             <h1 className="text-3xl font-bold tracking-tight text-gray-900">
               {platform ? getPlatformName(platform, language) : messages.catalog}
             </h1>
@@ -99,31 +120,53 @@ export default function CatalogPlatformPage() {
         <p className="text-gray-500 text-sm">{messages.gameNotFound}</p>
       ) : platform.has_offer_types ? (
         offerTypes.length === 0 ? (
-          <p className="text-gray-500 text-sm">{messages.noOfferTypes}</p>
+          <section className="rounded-2xl border border-gray-200 bg-white p-4 shadow-sm">
+            <h2 className="text-lg font-semibold text-gray-900">
+              {messages.offerTypesLabel}
+            </h2>
+            <p className="mt-3 text-gray-500 text-sm">
+              {messages.noOfferTypesAvailableYet}
+            </p>
+          </section>
         ) : (
-          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+          <section className="space-y-3">
+            <h2 className="text-lg font-semibold text-gray-900">
+              {messages.offerTypesLabel}
+            </h2>
+            <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
             {offerTypes.map((offerType) => (
               <Link
                 key={offerType.id}
                 href={`/catalog/${platform.slug}/${offerType.slug}`}
-                className="group block rounded-2xl border border-gray-200 bg-white p-5 shadow-sm transition-all hover:-translate-y-0.5 hover:border-orange-200 hover:shadow-md"
+                className="group block cursor-pointer rounded-xl border border-gray-200 bg-white p-4 shadow-sm transition-all duration-200 hover:-translate-y-0.5 hover:border-orange-200 hover:shadow-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-orange-400/70"
               >
-                <p className="text-lg font-semibold text-gray-900 transition-colors group-hover:text-orange-700">
+                <p className="text-base font-semibold text-gray-900 transition-colors group-hover:text-orange-700">
                   {getOfferTypeName(offerType, language)}
                 </p>
-                <p className="mt-2 text-sm text-gray-500">{offerType.name}</p>
+                <p className="mt-1 text-xs text-gray-500">{offerType.name}</p>
               </Link>
             ))}
-          </div>
+            </div>
+          </section>
         )
       ) : products.length === 0 ? (
-        <p className="text-gray-500 text-sm">{messages.noProducts}</p>
+        <section className="space-y-3">
+          <h2 className="text-lg font-semibold text-gray-900">
+            {messages.productsLabel}
+          </h2>
+          <p className="text-gray-500 text-sm">{messages.noProductsFoundYet}</p>
+        </section>
       ) : (
-        <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4">
-          {products.map((product) => (
-            <ProductCard key={product.id} product={product} />
-          ))}
-        </div>
+        <section className="space-y-3">
+          <h2 className="text-lg font-semibold text-gray-900">
+            {messages.productsLabel}
+          </h2>
+          <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4">
+            {products.map((product) => (
+              <ProductCard key={product.id} product={product} />
+            ))}
+          </div>
+        </section>
       )}
     </div>
   );

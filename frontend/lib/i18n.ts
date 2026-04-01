@@ -137,6 +137,9 @@ export interface TranslationMessages {
   productNotFound: string;
   back: string;
   categoryLabel: string;
+  platformsLabel: string;
+  offerTypesLabel: string;
+  productsLabel: string;
   selectedCategoryLabel: string;
   selectedGameLabel: string;
   selectedOfferTypeLabel: string;
@@ -168,6 +171,9 @@ export interface TranslationMessages {
   productUpdated: string;
   createProductFailed: string;
   updateFailed: string;
+  noPlatformsAvailableYet: string;
+  noOfferTypesAvailableYet: string;
+  noProductsFoundYet: string;
   statusPending: string;
   statusPaid: string;
   statusDelivered: string;
@@ -325,6 +331,9 @@ export const translations: Record<Language, TranslationMessages> = {
     productNotFound: "Không tìm thấy sản phẩm.",
     back: "Quay lại",
     categoryLabel: "Danh mục",
+    platformsLabel: "Nền tảng",
+    offerTypesLabel: "Loại dịch vụ",
+    productsLabel: "Sản phẩm",
     selectedCategoryLabel: "Danh mục đã chọn",
     selectedGameLabel: "Nền tảng đã chọn",
     selectedOfferTypeLabel: "Loại dịch vụ đã chọn",
@@ -357,6 +366,9 @@ export const translations: Record<Language, TranslationMessages> = {
     productUpdated: "Cập nhật sản phẩm thành công!",
     createProductFailed: "Không thể tạo sản phẩm",
     updateFailed: "Cập nhật thất bại",
+    noPlatformsAvailableYet: "Chưa có nền tảng nào.",
+    noOfferTypesAvailableYet: "Chưa có loại dịch vụ nào.",
+    noProductsFoundYet: "Chưa có sản phẩm nào.",
     statusPending: "Chờ thanh toán",
     statusPaid: "Đã thanh toán",
     statusDelivered: "Đã giao",
@@ -511,6 +523,9 @@ export const translations: Record<Language, TranslationMessages> = {
     productNotFound: "Product not found.",
     back: "Back",
     categoryLabel: "Category",
+    platformsLabel: "Platforms",
+    offerTypesLabel: "Offer Types",
+    productsLabel: "Products",
     selectedCategoryLabel: "Selected Category",
     selectedGameLabel: "Selected Platform",
     selectedOfferTypeLabel: "Selected Offer Type",
@@ -543,6 +558,9 @@ export const translations: Record<Language, TranslationMessages> = {
     productUpdated: "Product updated!",
     createProductFailed: "Failed to create product",
     updateFailed: "Update failed",
+    noPlatformsAvailableYet: "No platforms available yet",
+    noOfferTypesAvailableYet: "No offer types available yet",
+    noProductsFoundYet: "No products found yet",
     statusPending: "Pending",
     statusPaid: "Paid",
     statusDelivered: "Delivered",

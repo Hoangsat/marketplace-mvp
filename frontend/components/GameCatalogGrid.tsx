@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useEffect, useState } from "react";
 
+import CatalogBreadcrumbs from "@/components/CatalogBreadcrumbs";
 import { apiFetch } from "@/lib/api";
 import { useLanguage } from "@/components/LanguageProvider";
 import { Category } from "@/lib/types";
@@ -27,8 +28,12 @@ export default function GameCatalogGrid() {
   }, []);
 
   return (
-    <div className="space-y-8">
-      <section className="rounded-2xl border border-orange-100 bg-gradient-to-br from-white to-orange-50 p-6 shadow-sm">
+    <div className="space-y-6">
+      <section className="rounded-2xl border border-orange-100 bg-gradient-to-br from-white to-orange-50 p-5 shadow-sm">
+        <CatalogBreadcrumbs
+          items={[{ label: messages.catalog }]}
+          className="text-orange-500"
+        />
         <h1 className="text-3xl font-bold tracking-tight text-gray-900">
           {messages.catalog}
         </h1>
@@ -55,9 +60,9 @@ export default function GameCatalogGrid() {
               <Link
                 key={category.id}
                 href={`/categories/${category.slug}`}
-                className="group block rounded-2xl border border-gray-200 bg-white p-5 shadow-sm transition-all hover:-translate-y-0.5 hover:border-orange-200 hover:shadow-md"
+                className="group block cursor-pointer rounded-3xl border border-gray-200 bg-white p-6 shadow-sm transition-all duration-200 hover:-translate-y-1 hover:border-orange-200 hover:shadow-lg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-orange-400/70"
               >
-                <p className="text-lg font-semibold text-gray-900 transition-colors group-hover:text-orange-700">
+                <p className="text-xl font-semibold text-gray-900 transition-colors group-hover:text-orange-700">
                   {category.name}
                 </p>
                 <p className="mt-2 text-sm text-gray-500">
