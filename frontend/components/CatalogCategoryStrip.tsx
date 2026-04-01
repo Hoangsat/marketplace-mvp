@@ -27,7 +27,7 @@ export default function CatalogCategoryStrip({
   const [categories, setCategories] = useState<Category[]>([]);
 
   useEffect(() => {
-    apiFetch<Category[]>("/api/catalog/categories/top")
+    apiFetch<Category[]>("/api/catalog/categories/top", { cache: "no-store" })
       .then((categoryData) => setCategories(categoryData))
       .catch(() => setCategories([]));
   }, []);

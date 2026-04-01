@@ -300,53 +300,28 @@ class PlatformCatalogApiTests(TestCase):
             email="seller@example.com",
             password="password123",
         )
-        self.games_category, _ = Category.objects.get_or_create(
-            name="Games",
-            defaults={
-                "slug": "games",
-                "is_featured_home": True,
-                "featured_rank": 1,
-            },
-        )
-        self.software_category = Category.objects.create(
-            name="Software",
-            slug="software",
-            is_featured_home=True,
-            featured_rank=2,
-        )
-        self.steam = Platform.objects.create(
-            name="Steam",
-            slug="steam",
-            display_name_vi="Steam",
-            category=self.games_category,
-        )
-        self.chatgpt = Platform.objects.create(
-            name="ChatGPT",
-            slug="chatgpt",
-            display_name_vi="ChatGPT",
-            category=self.software_category,
-        )
-        self.steam_accounts = OfferType.objects.create(
-            platform=self.steam,
-            name="Accounts",
+        self.games_category = Category.objects.get(slug="games")
+        self.ai_tools_category = Category.objects.get(slug="ai-tools")
+        self.software_category = Category.objects.get(slug="software")
+        self.free_fire = Platform.objects.get(slug="free-fire")
+        self.chatgpt = Platform.objects.get(slug="chatgpt")
+        self.free_fire_accounts = OfferType.objects.get(
+            platform=self.free_fire,
             slug="accounts",
-            display_name_vi="Tai khoan",
         )
-        self.chatgpt_accounts = OfferType.objects.create(
+        self.chatgpt_accounts = OfferType.objects.get(
             platform=self.chatgpt,
-            name="Accounts",
             slug="accounts",
-            display_name_vi="Tai khoan",
         )
-        self.steam_product = Product.objects.create(
-            title="Steam account",
+        self.free_fire_product = Product.objects.create(
+            title="Free Fire account",
             description="Ready to use",
             price=Decimal("25.00"),
             stock=2,
             seller=self.seller,
             category=self.games_category,
-            platform=self.steam,
-            offer_type=self.steam_accounts,
+            platform=self.free_fire,
+            offer_type=self.free_fire_accounts,
         )
         Product.objects.create(
             title="ChatGPT account",
@@ -354,7 +329,7 @@ class PlatformCatalogApiTests(TestCase):
             price=Decimal("30.00"),
             stock=2,
             seller=self.seller,
-            category=self.software_category,
+            category=self.ai_tools_category,
             platform=self.chatgpt,
             offer_type=self.chatgpt_accounts,
         )
@@ -371,21 +346,23 @@ class PlatformCatalogApiTests(TestCase):
         )
 
     def test_offer_types_can_be_filtered_by_platform_alias(self):
-        response = self.client.get("/offer-types", {"platform": "steam"})
-        legacy_response = self.client.get("/offer-types", {"game": "steam"})
+        response = self.client.get("/offer-types", {"platform": "free-fire"})
+        legacy_response = self.client.get("/offer-types", {"game": "free-fire"})
 
         self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertEqual(len(response.json()), 1)
-        self.assertEqual(response.json()[0]["platform_id"], self.steam.id)
+        self.assertEqual(len(response.json()), 6)
+        self.assertTrue(
+            all(item["platform_id"] == self.free_fire.id for item in response.json())
+        )
         self.assertEqual(response.json(), legacy_response.json())
 
     def test_products_can_be_filtered_by_platform_and_legacy_game_alias(self):
-        response = self.client.get("/products", {"platform": "steam"})
-        legacy_response = self.client.get("/products", {"game": "steam"})
+        response = self.client.get("/products", {"platform": "free-fire"})
+        legacy_response = self.client.get("/products", {"game": "free-fire"})
 
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(len(response.json()), 1)
-        self.assertEqual(response.json()[0]["id"], self.steam_product.id)
+        self.assertEqual(response.json()[0]["id"], self.free_fire_product.id)
         self.assertEqual(response.json(), legacy_response.json())
 
     def test_create_product_accepts_legacy_game_id_alias(self):
@@ -394,42 +371,132 @@ class PlatformCatalogApiTests(TestCase):
         response = self.client.post(
             "/products",
             {
-                "title": "Steam wallet top-up",
+                "title": "Free Fire power-leveling",
                 "description": "Instant delivery",
                 "price": "9.99",
                 "stock": 4,
-                "game_id": self.steam.id,
-                "offer_type_id": self.steam_accounts.id,
+                "game_id": self.free_fire.id,
+                "offer_type_id": self.free_fire_accounts.id,
             },
         )
 
         self.assertEqual(response.status_code, status.HTTP_201_CREATED)
         created = Product.objects.get(id=response.json()["id"])
-        self.assertEqual(created.platform_id, self.steam.id)
+        self.assertEqual(created.platform_id, self.free_fire.id)
         self.assertEqual(created.category_id, self.games_category.id)
-        self.assertEqual(created.offer_type_id, self.steam_accounts.id)
+        self.assertEqual(created.offer_type_id, self.free_fire_accounts.id)
 
-    def test_category_catalog_endpoints_return_top_level_navigation(self):
+    def test_category_catalog_endpoints_return_curated_top_level_navigation(self):
         response = self.client.get("/api/catalog/categories/top")
-        platform_response = self.client.get("/api/catalog/categories/games/platforms")
 
         self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertEqual(platform_response.status_code, status.HTTP_200_OK)
-        self.assertEqual(response.json()[0]["slug"], "games")
-        platform_slugs = [item["slug"] for item in platform_response.json()]
-        self.assertIn("steam", platform_slugs)
-        self.assertIn("free-fire", platform_slugs)
-        self.assertIn("pubg-mobile", platform_slugs)
-        self.assertIn("genshin-impact", platform_slugs)
+        self.assertEqual(
+            [item["slug"] for item in response.json()],
+            [
+                "games",
+                "ai-tools",
+                "software",
+                "subscriptions",
+                "gift-cards",
+                "learning",
+                "vpn-security",
+            ],
+        )
+
+    def test_category_platform_endpoints_return_curated_platform_sets(self):
+        games_response = self.client.get("/api/catalog/categories/games/platforms")
+        ai_tools_response = self.client.get("/api/catalog/categories/ai-tools/platforms")
+        software_response = self.client.get("/api/catalog/categories/software/platforms")
+        subscriptions_response = self.client.get(
+            "/api/catalog/categories/subscriptions/platforms"
+        )
+        gift_cards_response = self.client.get(
+            "/api/catalog/categories/gift-cards/platforms"
+        )
+
+        self.assertEqual(games_response.status_code, status.HTTP_200_OK)
+        self.assertEqual(
+            {item["slug"] for item in games_response.json()},
+            {
+                "black-myth-wukong",
+                "elden-ring",
+                "grand-theft-auto-v",
+                "minecraft",
+                "free-fire",
+                "pubg-mobile",
+                "genshin-impact",
+            },
+        )
+        self.assertNotIn(
+            "dota-2",
+            {item["slug"] for item in games_response.json()},
+        )
+        self.assertNotIn(
+            "league-of-legends",
+            {item["slug"] for item in games_response.json()},
+        )
+        self.assertNotIn(
+            "lineage-2",
+            {item["slug"] for item in games_response.json()},
+        )
+        self.assertNotIn(
+            "lien-quan-mobile",
+            {item["slug"] for item in games_response.json()},
+        )
+
+        self.assertEqual(ai_tools_response.status_code, status.HTTP_200_OK)
+        self.assertEqual(
+            {item["slug"] for item in ai_tools_response.json()},
+            {"chatgpt", "claude", "cursor", "kling-ai", "suno"},
+        )
+
+        self.assertEqual(software_response.status_code, status.HTTP_200_OK)
+        software_slugs = {item["slug"] for item in software_response.json()}
+        self.assertIn("microsoft-office", software_slugs)
+        self.assertNotIn("word", software_slugs)
+        self.assertNotIn("excel", software_slugs)
+        self.assertNotIn("ms-office-365", software_slugs)
+
+        self.assertEqual(subscriptions_response.status_code, status.HTTP_200_OK)
+        subscription_slugs = {item["slug"] for item in subscriptions_response.json()}
+        self.assertIn("netflix", subscription_slugs)
+        self.assertNotIn("netflix-premium", subscription_slugs)
+
+        self.assertEqual(gift_cards_response.status_code, status.HTTP_200_OK)
+        gift_card_slugs = {item["slug"] for item in gift_cards_response.json()}
+        self.assertEqual(gift_card_slugs, {"steam"})
+        self.assertNotIn("steam-wallet-code", gift_card_slugs)
+
+    def test_legacy_demo_game_platforms_are_moved_out_of_games_category(self):
+        legacy_slugs = {"dota-2", "league-of-legends", "lineage-2", "lien-quan-mobile"}
+
+        self.assertFalse(
+            Platform.objects.filter(
+                category__slug="games",
+                slug__in=legacy_slugs,
+            ).exists()
+        )
+        self.assertEqual(
+            set(
+                Platform.objects.filter(slug__in=legacy_slugs).values_list(
+                    "category__slug",
+                    flat=True,
+                )
+            ),
+            {"legacy-games"},
+        )
 
     def test_platform_detail_exposes_offer_type_usage(self):
-        response = self.client.get("/platforms/steam")
+        response = self.client.get("/platforms/chatgpt")
 
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertTrue(response.json()["has_offer_types"])
-        self.assertEqual(response.json()["offer_types"][0]["slug"], "accounts")
+        self.assertEqual(
+            [item["slug"] for item in response.json()["offer_types"]],
+            ["accounts", "subscription"],
+        )
 
-    def test_new_games_expose_same_offer_type_hierarchy_as_existing_games(self):
+    def test_seeded_games_expose_same_offer_type_hierarchy(self):
         expected_offer_type_slugs = [
             "accounts",
             "boosting",
@@ -455,11 +522,11 @@ class PlatformCatalogApiTests(TestCase):
         response = self.client.post(
             "/products",
             {
-                "title": "Steam direct listing",
+                "title": "Free Fire direct listing",
                 "description": "Should fail",
                 "price": "11.00",
                 "stock": 1,
-                "platform_id": self.steam.id,
+                "platform_id": self.free_fire.id,
             },
         )
 
@@ -576,7 +643,7 @@ class PlatformCatalogApiTests(TestCase):
                 "price": "9.00",
                 "stock": 1,
                 "category_id": terminal_category.id,
-                "offer_type_id": self.steam_accounts.id,
+                "offer_type_id": self.free_fire_accounts.id,
             },
         )
 
@@ -593,22 +660,22 @@ class PlatformCatalogApiTests(TestCase):
         )
 
         response = self.client.put(
-            f"/products/{self.steam_product.id}",
+            f"/products/{self.free_fire_product.id}",
             {
                 "platform_id": telegram.id,
                 "offer_type_id": None,
-                "title": self.steam_product.title,
-                "description": self.steam_product.description,
-                "price": str(self.steam_product.price),
-                "stock": self.steam_product.stock,
+                "title": self.free_fire_product.title,
+                "description": self.free_fire_product.description,
+                "price": str(self.free_fire_product.price),
+                "stock": self.free_fire_product.stock,
             },
             format="json",
         )
 
         self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.steam_product.refresh_from_db()
-        self.assertEqual(self.steam_product.platform_id, telegram.id)
-        self.assertIsNone(self.steam_product.offer_type_id)
+        self.free_fire_product.refresh_from_db()
+        self.assertEqual(self.free_fire_product.platform_id, telegram.id)
+        self.assertIsNone(self.free_fire_product.offer_type_id)
 
     def test_update_category_only_product_in_terminal_category_succeeds_without_platform(self):
         self.client.force_authenticate(user=self.seller)
@@ -682,35 +749,35 @@ class PlatformCatalogApiTests(TestCase):
         self.client.force_authenticate(user=self.seller)
 
         response = self.client.put(
-            f"/products/{self.steam_product.id}",
+            f"/products/{self.free_fire_product.id}",
             {
-                "title": "Updated Steam account",
-                "description": self.steam_product.description,
-                "price": str(self.steam_product.price),
-                "stock": self.steam_product.stock,
-                "platform_id": self.steam.id,
-                "offer_type_id": self.steam_accounts.id,
+                "title": "Updated Free Fire account",
+                "description": self.free_fire_product.description,
+                "price": str(self.free_fire_product.price),
+                "stock": self.free_fire_product.stock,
+                "platform_id": self.free_fire.id,
+                "offer_type_id": self.free_fire_accounts.id,
             },
             format="json",
         )
 
         self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.steam_product.refresh_from_db()
-        self.assertEqual(self.steam_product.title, "Updated Steam account")
-        self.assertEqual(self.steam_product.platform_id, self.steam.id)
-        self.assertEqual(self.steam_product.offer_type_id, self.steam_accounts.id)
+        self.free_fire_product.refresh_from_db()
+        self.assertEqual(self.free_fire_product.title, "Updated Free Fire account")
+        self.assertEqual(self.free_fire_product.platform_id, self.free_fire.id)
+        self.assertEqual(self.free_fire_product.offer_type_id, self.free_fire_accounts.id)
 
     def test_update_with_offer_type_without_matching_platform_fails(self):
         self.client.force_authenticate(user=self.seller)
 
         response = self.client.put(
-            f"/products/{self.steam_product.id}",
+            f"/products/{self.free_fire_product.id}",
             {
-                "title": self.steam_product.title,
-                "description": self.steam_product.description,
-                "price": str(self.steam_product.price),
-                "stock": self.steam_product.stock,
-                "platform_id": self.steam.id,
+                "title": self.free_fire_product.title,
+                "description": self.free_fire_product.description,
+                "price": str(self.free_fire_product.price),
+                "stock": self.free_fire_product.stock,
+                "platform_id": self.free_fire.id,
                 "offer_type_id": self.chatgpt_accounts.id,
             },
             format="json",
@@ -811,7 +878,7 @@ class SearchApiTests(TestCase):
             is_active=False,
         )
         self.games_category = Category.objects.get(slug="games")
-        self.dota_platform = Platform.objects.get(slug="dota-2")
+        self.free_fire_platform = Platform.objects.get(slug="free-fire")
 
     def test_normalize_search_query_trims_lowercases_and_collapses_spaces(self):
         self.assertEqual(normalize_search_query("  Zen   CHAT  Plus "), "zen chat plus")
@@ -853,44 +920,44 @@ class SearchApiTests(TestCase):
             )
         )
 
-    def test_search_suggest_returns_dota_platform_for_dota_query(self):
-        response = self.client.get("/api/search/suggest", {"q": "dota"})
+    def test_search_suggest_returns_free_fire_platform_for_free_query(self):
+        response = self.client.get("/api/search/suggest", {"q": "free"})
 
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertTrue(
             any(
                 item["type"] == "game"
-                and item["id"] == self.dota_platform.id
-                and item["slug"] == "dota-2"
-                and item["url"] == "/catalog/dota-2"
+                and item["id"] == self.free_fire_platform.id
+                and item["slug"] == "free-fire"
+                and item["url"] == "/catalog/free-fire"
                 for item in response.json()["categories"]
             )
         )
 
-    def test_search_suggest_returns_dota_platform_for_dota_two_query(self):
-        response = self.client.get("/api/search/suggest", {"q": "dota 2"})
+    def test_search_suggest_returns_free_fire_platform_for_full_query(self):
+        response = self.client.get("/api/search/suggest", {"q": "free fire"})
 
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertTrue(
             any(
                 item["type"] == "game"
-                and item["id"] == self.dota_platform.id
-                and item["slug"] == "dota-2"
-                and item["url"] == "/catalog/dota-2"
+                and item["id"] == self.free_fire_platform.id
+                and item["slug"] == "free-fire"
+                and item["url"] == "/catalog/free-fire"
                 for item in response.json()["categories"]
             )
         )
 
     def test_search_suggest_keeps_direct_matches_when_alias_lookup_fails(self):
         with patch.object(SearchAlias.objects, "filter", side_effect=RuntimeError("alias boom")):
-            response = self.client.get("/api/search/suggest", {"q": "dota"})
+            response = self.client.get("/api/search/suggest", {"q": "free"})
 
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertTrue(
             any(
                 item["type"] == "game"
-                and item["id"] == self.dota_platform.id
-                and item["slug"] == "dota-2"
+                and item["id"] == self.free_fire_platform.id
+                and item["slug"] == "free-fire"
                 for item in response.json()["categories"]
             )
         )

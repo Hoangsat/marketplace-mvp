@@ -16,7 +16,7 @@ export default function GameCatalogGrid() {
   const [error, setError] = useState(false);
 
   useEffect(() => {
-    apiFetch<Category[]>("/api/catalog/categories/top")
+    apiFetch<Category[]>("/api/catalog/categories/top", { cache: "no-store" })
       .then((categoryData) => {
         setCategories(categoryData);
         setError(false);

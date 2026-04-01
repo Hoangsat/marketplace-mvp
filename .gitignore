@@ -1,8 +1,54 @@
+# =========================
+# Python / Django
+# =========================
 __pycache__/
-*.pyc
+*.py[cod]
 *.pyo
-*.pyd
-*.db
+
+# Safety: block sqlite even if accidentally created
+db.sqlite3
+backend/db.sqlite3
+
+# Logs
+*.log
+
+# =========================
+# Virtual env
+# =========================
+.venv/
+venv/
+env/
+
+# =========================
+# Env files (CRITICAL)
+# =========================
 .env
+.env.*
+!.env.example
+
+# =========================
+# Node / Next.js
+# =========================
 node_modules/
 .next/
+out/
+build/
+
+# =========================
+# IDE / OS
+# =========================
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+
+# =========================
+# Cache / misc
+# =========================
+.cache/
+pytest_cache/
+.coverage
+
+# Logs (frontend)
+npm-debug.log*
+yarn-debug.log*
