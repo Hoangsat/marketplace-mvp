@@ -73,6 +73,8 @@ def forwards(apps, schema_editor):
 
 
 class Migration(migrations.Migration):
+    atomic = False
+
     dependencies = [
         ("catalog", "0014_platform_marketplace_schema"),
     ]
