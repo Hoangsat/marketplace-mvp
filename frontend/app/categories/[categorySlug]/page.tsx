@@ -78,35 +78,27 @@ export default function CategoryPage() {
   }, [categorySlug]);
 
   const isTerminalCategory = !platforms || platforms.length === 0;
+  const browseGroupLabel =
+    category?.slug === "games" ? messages.gamesCategoryName : messages.platformsLabel;
 
   return (
-    <div className="space-y-5">
+    <div className="space-y-4">
       <CatalogCategoryStrip activeCategorySlug={categorySlug} />
 
-      <section className="rounded-3xl border border-slate-800 bg-slate-950 p-5 text-slate-100 shadow-xl">
-        <Link
-          href="/catalog"
-          className="text-sm font-medium text-orange-300 hover:underline"
-        >
-          {messages.backToCatalog}
-        </Link>
+      <section className="space-y-2">
+        <CatalogBreadcrumbs
+          items={[
+            { label: messages.home, href: "/" },
+            { label: messages.catalog, href: "/catalog" },
+            { label: category?.name ?? categorySlug },
+          ]}
+          className="text-gray-400"
+        />
 
-        <div className="mt-3 flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
-          <div>
-            <CatalogBreadcrumbs
-              items={[
-                { label: messages.catalog, href: "/catalog" },
-                { label: category?.name ?? categorySlug },
-              ]}
-              className="text-slate-400"
-            />
-            <p className="text-sm uppercase tracking-[0.2em] text-slate-400">
-              {messages.categoryLabel}
-            </p>
-            <h1 className="mt-2 text-3xl font-bold tracking-tight">
-              {category?.name ?? categorySlug}
-            </h1>
-          </div>
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+          <h1 className="text-2xl font-bold tracking-tight text-gray-900">
+            {category?.name ?? categorySlug}
+          </h1>
           {!loading && !notFound && !error && category && isTerminalCategory && (
             <Link
               href={`/seller/products/new?category=${category.slug}`}
@@ -126,26 +118,24 @@ export default function CategoryPage() {
         <p className="text-sm text-red-600">{messages.loadCatalogError}</p>
       ) : (
         <>
-          <section className="rounded-2xl border border-gray-200 bg-white p-4 shadow-sm">
-            <h2 className="text-lg font-semibold text-gray-900">
-              {messages.platformsLabel}
+          <section className="space-y-3">
+            <h2 className="text-sm font-semibold uppercase tracking-[0.16em] text-gray-500">
+              {browseGroupLabel}
             </h2>
             {platforms.length > 0 ? (
-              <div className="mt-3 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+              <div className="flex flex-wrap gap-2">
                 {platforms.map((platform) => (
                   <Link
                     key={platform.id}
                     href={`/catalog/${platform.slug}`}
-                    className="group block cursor-pointer rounded-2xl border border-gray-200 bg-gray-50 p-4 text-sm font-medium text-gray-700 shadow-sm transition-all duration-200 hover:-translate-y-0.5 hover:border-orange-300 hover:shadow-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-orange-400/70"
+                    className="inline-flex items-center rounded-full border border-gray-200 bg-white px-4 py-2 text-sm font-medium text-gray-700 shadow-sm transition-all duration-200 hover:border-orange-300 hover:bg-orange-50 hover:text-orange-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-orange-400/70"
                   >
-                    <p className="text-base font-semibold text-gray-900 transition-colors group-hover:text-orange-700">
-                      {platform.name}
-                    </p>
+                    {platform.name}
                   </Link>
                 ))}
               </div>
             ) : (
-              <p className="mt-3 text-sm text-gray-500">
+              <p className="text-sm text-gray-500">
                 {messages.noPlatformsAvailableYet}
               </p>
             )}

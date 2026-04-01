@@ -144,6 +144,8 @@ export interface TranslationMessages {
   selectedGameLabel: string;
   selectedOfferTypeLabel: string;
   catalogContextPrefilled: string;
+  catalogContextLocked: string;
+  catalogContextNoSelectionRequired: string;
   categoryStillRequired: string;
   gamesCategoryName: string;
   categoryAutoAssigned: string;
@@ -174,6 +176,14 @@ export interface TranslationMessages {
   noPlatformsAvailableYet: string;
   noOfferTypesAvailableYet: string;
   noProductsFoundYet: string;
+  searchCategoriesGroupLabel: string;
+  searchTermsGroupLabel: string;
+  showAllResults: string;
+  searchResultsLabel: string;
+  noSearchQuery: string;
+  noSearchResults: string;
+  noSuggestResults: string;
+  loadMoreResults: string;
   statusPending: string;
   statusPaid: string;
   statusDelivered: string;
@@ -337,7 +347,9 @@ export const translations: Record<Language, TranslationMessages> = {
     selectedCategoryLabel: "Danh mục đã chọn",
     selectedGameLabel: "Nền tảng đã chọn",
     selectedOfferTypeLabel: "Loại dịch vụ đã chọn",
-    catalogContextPrefilled: "Ngữ cảnh danh mục đã được điền sẵn từ trang hiện tại.",
+    catalogContextPrefilled: "Tin đăng này sẽ được đặt tự động vào nhánh danh mục đã chọn.",
+    catalogContextLocked: "Ngữ cảnh danh mục này được khóa theo trang bạn vừa chọn.",
+    catalogContextNoSelectionRequired: "Vị trí danh mục đã được xác định sẵn, bạn không cần chọn lại danh mục, nền tảng hoặc loại dịch vụ.",
     categoryStillRequired: "Bạn vẫn cần chọn danh mục hệ thống hiện tại trước khi đăng bán.",
     gamesCategoryName: "Trò chơi",
     categoryAutoAssigned: "Danh mục của nền tảng đã được gán tự động cho tin đăng này.",
@@ -369,6 +381,14 @@ export const translations: Record<Language, TranslationMessages> = {
     noPlatformsAvailableYet: "Chưa có nền tảng nào.",
     noOfferTypesAvailableYet: "Chưa có loại dịch vụ nào.",
     noProductsFoundYet: "Chưa có sản phẩm nào.",
+    searchCategoriesGroupLabel: "Danh mục",
+    searchTermsGroupLabel: "Tìm kiếm",
+    showAllResults: "Xem tất cả kết quả",
+    searchResultsLabel: "Kết quả tìm kiếm",
+    noSearchQuery: "Nhập từ khóa để tìm kiếm sản phẩm.",
+    noSearchResults: "Không tìm thấy kết quả phù hợp.",
+    noSuggestResults: "Không có kết quả.",
+    loadMoreResults: "Tải thêm",
     statusPending: "Chờ thanh toán",
     statusPaid: "Đã thanh toán",
     statusDelivered: "Đã giao",
@@ -529,7 +549,9 @@ export const translations: Record<Language, TranslationMessages> = {
     selectedCategoryLabel: "Selected Category",
     selectedGameLabel: "Selected Platform",
     selectedOfferTypeLabel: "Selected Offer Type",
-    catalogContextPrefilled: "Catalog context was prefilled from this page.",
+    catalogContextPrefilled: "This listing will be placed automatically in the selected catalog branch.",
+    catalogContextLocked: "This catalog context is locked from the page you came from.",
+    catalogContextNoSelectionRequired: "Category placement is already determined, so no additional category, platform, or offer type selection is required.",
     categoryStillRequired: "You still need to choose a category before listing.",
     gamesCategoryName: "Games",
     categoryAutoAssigned: "The platform category was assigned automatically for this listing.",
@@ -561,6 +583,14 @@ export const translations: Record<Language, TranslationMessages> = {
     noPlatformsAvailableYet: "No platforms available yet",
     noOfferTypesAvailableYet: "No offer types available yet",
     noProductsFoundYet: "No products found yet",
+    searchCategoriesGroupLabel: "Categories",
+    searchTermsGroupLabel: "Search",
+    showAllResults: "Show all results",
+    searchResultsLabel: "Search Results",
+    noSearchQuery: "Enter a search query to find products.",
+    noSearchResults: "No matching products found.",
+    noSuggestResults: "No results found.",
+    loadMoreResults: "Load More",
     statusPending: "Pending",
     statusPaid: "Paid",
     statusDelivered: "Delivered",

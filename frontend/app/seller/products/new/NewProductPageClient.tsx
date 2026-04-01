@@ -36,6 +36,7 @@ export default function NewProductPageClient() {
   const [selectedOfferType, setSelectedOfferType] = useState<OfferType | null>(null);
   const [selectedCategory, setSelectedCategory] = useState<Category | null>(null);
   const [platformUsesOfferTypes, setPlatformUsesOfferTypes] = useState(false);
+  const [catalogContextLoaded, setCatalogContextLoaded] = useState(!searchParams.toString());
 
   const [form, setForm] = useState({
     title: "",
@@ -54,6 +55,7 @@ export default function NewProductPageClient() {
   const hasCatalogQuery = Boolean(platformSlug || offerTypeSlug || categorySlug);
 
   useEffect(() => {
+    setCatalogContextLoaded(!hasCatalogQuery);
     if (!getToken()) {
       router.push("/login");
       return;
@@ -101,6 +103,7 @@ export default function NewProductPageClient() {
           platform_id: resolvedPlatform ? String(resolvedPlatform.id) : currentForm.platform_id,
           offer_type_id: resolvedOfferType ? String(resolvedOfferType.id) : "",
         }));
+        setCatalogContextLoaded(true);
       })
       .catch(() => {
         if (isCancelled) {
@@ -113,6 +116,7 @@ export default function NewProductPageClient() {
         setSelectedOfferType(null);
         setSelectedCategory(null);
         setPlatformUsesOfferTypes(false);
+        setCatalogContextLoaded(true);
       });
 
     return () => {
@@ -241,6 +245,13 @@ export default function NewProductPageClient() {
   const showCatalogContext = Boolean(
     selectedPlatform || selectedOfferType || selectedCategory || hasCatalogQuery
   );
+  const hasResolvedCatalogContext = Boolean(
+    (categorySlug && form.category_id) ||
+      (platformSlug && form.platform_id) ||
+      (offerTypeSlug && form.offer_type_id)
+  );
+  const isLockedContextMode =
+    hasCatalogQuery && (!catalogContextLoaded || hasResolvedCatalogContext);
 
   return (
     <div className="max-w-lg mx-auto">
@@ -250,29 +261,51 @@ export default function NewProductPageClient() {
           <p className="font-medium text-gray-900">
             {messages.catalogContextPrefilled}
           </p>
-          {selectedCategory && (
-            <p className="mt-2 text-gray-700">
-              {messages.selectedCategoryLabel}: {selectedCategory.name}
-            </p>
+          {isLockedContextMode && (
+            <p className="mt-2 text-gray-600">{messages.catalogContextLocked}</p>
           )}
-          {selectedPlatform && (
-            <p className="mt-2 text-gray-700">
-              {messages.selectedGameLabel}:{" "}
-              {getPlatformName(selectedPlatform, language)}
-            </p>
+          {!catalogContextLoaded && hasCatalogQuery ? (
+            <p className="mt-2 text-gray-600">{messages.loading}</p>
+          ) : (
+            <>
+              {selectedCategory && (
+                <p className="mt-2 text-gray-700">
+                  {messages.selectedCategoryLabel}: {selectedCategory.name}
+                </p>
+              )}
+              {selectedPlatform && (
+                <p className="mt-2 text-gray-700">
+                  {messages.selectedGameLabel}:{" "}
+                  {getPlatformName(selectedPlatform, language)}
+                </p>
+              )}
+              {selectedOfferType && (
+                <p className="mt-1 text-gray-700">
+                  {messages.selectedOfferTypeLabel}:{" "}
+                  {getOfferTypeName(selectedOfferType, language)}
+                </p>
+              )}
+            </>
           )}
-          {selectedOfferType && (
-            <p className="mt-1 text-gray-700">
-              {messages.selectedOfferTypeLabel}:{" "}
-              {getOfferTypeName(selectedOfferType, language)}
+          {isLockedContextMode ? (
+            <p className="mt-2 text-gray-600">
+              {messages.catalogContextNoSelectionRequired}
             </p>
-          )}
-          {selectedPlatform && (
+          ) : selectedPlatform ? (
             <p className="mt-2 text-gray-600">{messages.categoryAutoAssigned}</p>
-          )}
+          ) : null}
         </div>
       )}
       <form onSubmit={handleSubmit} className="space-y-4">
+        {isLockedContextMode && form.category_id && (
+          <input type="hidden" name="category_id" value={form.category_id} />
+        )}
+        {isLockedContextMode && form.platform_id && (
+          <input type="hidden" name="platform_id" value={form.platform_id} />
+        )}
+        {isLockedContextMode && form.offer_type_id && (
+          <input type="hidden" name="offer_type_id" value={form.offer_type_id} />
+        )}
         <Field label={messages.titleLabel}>
           <input
             required
@@ -313,45 +346,49 @@ export default function NewProductPageClient() {
             />
           </Field>
         </div>
-        <Field label={messages.categoryLabel}>
-          <select
-            required
-            value={form.category_id}
-            onChange={(event) => {
-              const nextCategoryId = event.target.value;
-              set("category_id", nextCategoryId);
-              setSelectedCategory(
-                categories.find(
-                  (category) => category.id === Number(nextCategoryId)
-                ) ?? null
-              );
-            }}
-            className={input}
-            disabled={Boolean(selectedPlatform)}
-          >
-            <option value="">{messages.selectCategory}</option>
-            {categories.map((category) => (
-              <option key={category.id} value={category.id}>
-                {category.name}
-              </option>
-            ))}
-          </select>
-        </Field>
-        <Field label={messages.selectedGameLabel}>
-          <select
-            value={form.platform_id}
-            onChange={(event) => set("platform_id", event.target.value)}
-            className={input}
-          >
-            <option value="">{messages.chooseGame}</option>
-            {platforms.map((platform) => (
-              <option key={platform.id} value={platform.id}>
-                {getPlatformName(platform, language)}
-              </option>
-            ))}
-          </select>
-        </Field>
-        {(platformUsesOfferTypes || offerTypes.length > 0) && (
+        {!isLockedContextMode && (
+          <Field label={messages.categoryLabel}>
+            <select
+              required
+              value={form.category_id}
+              onChange={(event) => {
+                const nextCategoryId = event.target.value;
+                set("category_id", nextCategoryId);
+                setSelectedCategory(
+                  categories.find(
+                    (category) => category.id === Number(nextCategoryId)
+                  ) ?? null
+                );
+              }}
+              className={input}
+              disabled={Boolean(selectedPlatform)}
+            >
+              <option value="">{messages.selectCategory}</option>
+              {categories.map((category) => (
+                <option key={category.id} value={category.id}>
+                  {category.name}
+                </option>
+              ))}
+            </select>
+          </Field>
+        )}
+        {!isLockedContextMode && (
+          <Field label={messages.selectedGameLabel}>
+            <select
+              value={form.platform_id}
+              onChange={(event) => set("platform_id", event.target.value)}
+              className={input}
+            >
+              <option value="">{messages.chooseGame}</option>
+              {platforms.map((platform) => (
+                <option key={platform.id} value={platform.id}>
+                  {getPlatformName(platform, language)}
+                </option>
+              ))}
+            </select>
+          </Field>
+        )}
+        {!isLockedContextMode && (platformUsesOfferTypes || offerTypes.length > 0) && (
           <Field label={messages.selectedOfferTypeLabel}>
             <select
               required={platformUsesOfferTypes}
@@ -380,7 +417,7 @@ export default function NewProductPageClient() {
 
         <button
           type="submit"
-          disabled={loading}
+          disabled={loading || (isLockedContextMode && !catalogContextLoaded)}
           className="w-full bg-orange-600 text-white py-2 rounded font-medium hover:bg-orange-700 disabled:opacity-50"
         >
           {loading ? messages.creating : messages.createProductTitle}

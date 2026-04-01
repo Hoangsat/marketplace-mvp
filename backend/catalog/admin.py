@@ -1,6 +1,6 @@
 from django.contrib import admin
 
-from .models import Category, OfferType, Platform, Product
+from .models import Category, OfferType, Platform, Product, SearchAlias
 
 
 @admin.register(Category)
@@ -40,3 +40,20 @@ class OfferTypeAdmin(admin.ModelAdmin):
     list_filter = ("platform__category", "platform", "is_active")
     ordering = ("name",)
     list_select_related = ("platform", "platform__category")
+
+
+@admin.register(SearchAlias)
+class SearchAliasAdmin(admin.ModelAdmin):
+    list_display = (
+        "id",
+        "query",
+        "normalized_query",
+        "entity_type",
+        "entity_id",
+        "weight",
+        "is_active",
+        "created_at",
+    )
+    search_fields = ("query", "normalized_query")
+    list_filter = ("entity_type", "is_active")
+    ordering = ("-weight", "query")

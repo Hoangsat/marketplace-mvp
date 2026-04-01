@@ -1,8 +1,9 @@
 from decimal import Decimal, InvalidOperation
+from urllib.parse import urlencode
 import uuid
 
 from django.core.files.storage import default_storage
-from django.db.models import ProtectedError
+from django.db.models import Case, IntegerField, ProtectedError, Q, Value, When
 from rest_framework import permissions, status
 from rest_framework.parsers import FormParser, JSONParser, MultiPartParser
 from rest_framework.response import Response
@@ -14,8 +15,10 @@ from .models import (
     OfferType,
     Platform,
     Product,
+    SearchAlias,
     filter_publicly_available_products,
     is_product_publicly_available,
+    normalize_search_query,
 )
 from .serializers import (
     CategoryDetailSerializer,
@@ -32,10 +35,21 @@ from .serializers import (
 ALLOWED_EXTENSIONS = {"jpg", "jpeg", "png"}
 MAX_FILE_SIZE_BYTES = 5 * 1024 * 1024
 MAX_IMAGES_PER_PRODUCT = 5
+SEARCH_PAGE_SIZE = 24
 
 
 def _detail_response(message: str, status_code: int) -> Response:
     return Response({"detail": message}, status=status_code)
+
+
+def _search_suggest_empty_response(query: str) -> Response:
+    return Response(
+        {
+            "query": query,
+            "categories": [],
+            "search_terms": [],
+        }
+    )
 
 
 def _first_error(errors) -> str:
@@ -144,6 +158,113 @@ def _category_has_active_platforms(category):
 
 def _category_queryset():
     return Category.objects.filter(parent__isnull=True)
+
+
+def _display_platform_name(platform):
+    return platform.display_name_vi or platform.name
+
+
+def _display_offer_type_name(offer_type):
+    return offer_type.display_name_vi or offer_type.name
+
+
+def _rank_search_text(query, text, *, exact, startswith, contains):
+    normalized_text = normalize_search_query(text)
+    if not normalized_text:
+        return None
+    if normalized_text == query:
+        return exact
+    if normalized_text.startswith(query):
+        return startswith
+    if query in normalized_text:
+        return contains
+    return None
+
+
+def _search_entity_score(query, values):
+    scores = [
+        _rank_search_text(query, value, exact=600, startswith=500, contains=400)
+        for value in values
+    ]
+    scores = [score for score in scores if score is not None]
+    return max(scores) if scores else None
+
+
+def _search_alias_score(query, values):
+    scores = [
+        _rank_search_text(query, value, exact=550, startswith=450, contains=350)
+        for value in values
+    ]
+    scores = [score for score in scores if score is not None]
+    return max(scores) if scores else None
+
+
+def _category_suggestion_item(category):
+    slug = getattr(category, "slug", "")
+    if not slug:
+        return None
+    return {
+        "type": SearchAlias.EntityType.CATEGORY,
+        "id": category.id,
+        "label": category.name,
+        "subtitle": None,
+        "slug": slug,
+        "image": None,
+        "url": f"/categories/{slug}",
+    }
+
+
+def _platform_suggestion_item(platform):
+    if platform is None:
+        return None
+    platform_slug = getattr(platform, "slug", "")
+    if not platform_slug:
+        return None
+    return {
+        "type": SearchAlias.EntityType.GAME,
+        "id": platform.id,
+        "label": _display_platform_name(platform),
+        "subtitle": getattr(platform.category, "name", None),
+        "slug": platform_slug,
+        "image": None,
+        "url": f"/catalog/{platform_slug}",
+    }
+
+
+def _offer_type_suggestion_item(offer_type):
+    platform = getattr(offer_type, "platform", None)
+    if platform is None:
+        return None
+    platform_slug = getattr(platform, "slug", "")
+    offer_type_slug = getattr(offer_type, "slug", "")
+    if not platform_slug or not offer_type_slug:
+        return None
+    platform_name = _display_platform_name(platform)
+    return {
+        "type": SearchAlias.EntityType.OFFER_TYPE,
+        "id": offer_type.id,
+        "label": _display_offer_type_name(offer_type),
+        "subtitle": platform_name,
+        "slug": offer_type_slug,
+        "image": None,
+        "url": f"/catalog/{platform_slug}/{offer_type_slug}",
+    }
+
+
+def _search_term_item(alias):
+    return {
+        "label": alias.query,
+        "query": alias.query,
+        "url": f"/search?{urlencode({'q': alias.query})}",
+    }
+
+
+def _safe_suggestion_item(builder, entity):
+    try:
+        return builder(entity)
+    except Exception as exc:
+        print("SearchSuggestView item mapping error:", exc)
+        return None
 
 
 class CategoryListView(APIView):
@@ -280,6 +401,280 @@ class OfferTypeListView(APIView):
 
         return Response(
             OfferTypeSerializer(offer_types.order_by("name", "id"), many=True).data
+        )
+
+
+class SearchSuggestView(APIView):
+    permission_classes = [permissions.AllowAny]
+
+    def get(self, request):
+        query = normalize_search_query(request.query_params.get("q"))
+        print("Suggest query:", query)
+        if len(query) < 2:
+            return _search_suggest_empty_response(query)
+
+        try:
+            categories = list(
+                _category_queryset().filter(name__icontains=query).order_by("name", "id")[:24]
+            )
+            platforms = list(
+                Platform.objects.select_related("category")
+                .filter(is_active=True)
+                .filter(Q(name__icontains=query) | Q(display_name_vi__icontains=query))
+                .order_by("name", "id")[:24]
+            )
+            offer_types = list(
+                OfferType.objects.select_related("platform", "platform__category")
+                .filter(is_active=True)
+                .filter(Q(name__icontains=query) | Q(display_name_vi__icontains=query))
+                .order_by("name", "id")[:24]
+            )
+            try:
+                aliases = list(
+                    SearchAlias.objects.filter(
+                        is_active=True,
+                        normalized_query__contains=query,
+                    )
+                    .order_by("-weight", "query", "id")[:48]
+                )
+            except Exception as exc:
+                print("SearchSuggestView alias error:", exc)
+                aliases = []
+
+            category_alias_ids = {
+                alias.entity_id
+                for alias in aliases
+                if alias.entity_type == SearchAlias.EntityType.CATEGORY and alias.entity_id is not None
+            }
+            game_alias_ids = {
+                alias.entity_id
+                for alias in aliases
+                if alias.entity_type == SearchAlias.EntityType.GAME and alias.entity_id is not None
+            }
+            offer_type_alias_ids = {
+                alias.entity_id
+                for alias in aliases
+                if alias.entity_type == SearchAlias.EntityType.OFFER_TYPE and alias.entity_id is not None
+            }
+
+            category_map = {
+                category.id: category
+                for category in _category_queryset().filter(id__in=category_alias_ids)
+            }
+            platform_map = {
+                platform.id: platform
+                for platform in Platform.objects.select_related("category").filter(
+                    id__in=game_alias_ids,
+                    is_active=True,
+                )
+            }
+            offer_type_map = {
+                offer_type.id: offer_type
+                for offer_type in OfferType.objects.select_related("platform", "platform__category").filter(
+                    id__in=offer_type_alias_ids,
+                    is_active=True,
+                )
+            }
+
+            category_aliases_by_id = {}
+            game_aliases_by_id = {}
+            offer_type_aliases_by_id = {}
+            search_term_aliases = []
+            for alias in aliases:
+                if alias.entity_type == SearchAlias.EntityType.CATEGORY and alias.entity_id in category_map:
+                    category_aliases_by_id.setdefault(alias.entity_id, []).append(alias)
+                elif alias.entity_type == SearchAlias.EntityType.GAME and alias.entity_id in platform_map:
+                    game_aliases_by_id.setdefault(alias.entity_id, []).append(alias)
+                elif (
+                    alias.entity_type == SearchAlias.EntityType.OFFER_TYPE
+                    and alias.entity_id in offer_type_map
+                ):
+                    offer_type_aliases_by_id.setdefault(alias.entity_id, []).append(alias)
+                elif alias.entity_type == SearchAlias.EntityType.SEARCH_TERM:
+                    search_term_aliases.append(alias)
+
+            ranked_entities = {}
+            for category in categories:
+                item = _safe_suggestion_item(_category_suggestion_item, category)
+                if not item:
+                    continue
+                ranked_entities[(SearchAlias.EntityType.CATEGORY, category.id)] = {
+                    "item": item,
+                    "score": _search_entity_score(query, [category.name]) or 0,
+                    "weight": 0,
+                }
+            for platform in platforms:
+                item = _safe_suggestion_item(_platform_suggestion_item, platform)
+                if not item:
+                    continue
+                ranked_entities[(SearchAlias.EntityType.GAME, platform.id)] = {
+                    "item": item,
+                    "score": _search_entity_score(query, [platform.name, platform.display_name_vi]) or 0,
+                    "weight": 0,
+                }
+            for offer_type in offer_types:
+                item = _safe_suggestion_item(_offer_type_suggestion_item, offer_type)
+                if not item:
+                    continue
+                ranked_entities[(SearchAlias.EntityType.OFFER_TYPE, offer_type.id)] = {
+                    "item": item,
+                    "score": _search_entity_score(query, [offer_type.name, offer_type.display_name_vi]) or 0,
+                    "weight": 0,
+                }
+
+            alias_entity_sets = [
+                (SearchAlias.EntityType.CATEGORY, category_map, category_aliases_by_id, _category_suggestion_item, lambda entity: [entity.name]),
+                (SearchAlias.EntityType.GAME, platform_map, game_aliases_by_id, _platform_suggestion_item, lambda entity: [entity.name, entity.display_name_vi]),
+                (SearchAlias.EntityType.OFFER_TYPE, offer_type_map, offer_type_aliases_by_id, _offer_type_suggestion_item, lambda entity: [entity.name, entity.display_name_vi]),
+            ]
+            for entity_type, entity_map, alias_map, serializer, text_values in alias_entity_sets:
+                for entity_id, entity_aliases in alias_map.items():
+                    entity = entity_map[entity_id]
+                    alias_score = _search_alias_score(
+                        query,
+                        [alias.normalized_query for alias in entity_aliases],
+                    )
+                    if alias_score is None:
+                        continue
+                    item = _safe_suggestion_item(serializer, entity)
+                    if not item:
+                        continue
+                    key = (entity_type, entity_id)
+                    current = ranked_entities.get(key)
+                    best_weight = max(alias.weight for alias in entity_aliases)
+                    direct_score = _search_entity_score(query, text_values(entity)) or 0
+                    candidate_score = max(direct_score, alias_score)
+                    candidate = {
+                        "item": current["item"] if current else item,
+                        "score": candidate_score,
+                        "weight": max(best_weight, current["weight"] if current else 0),
+                    }
+                    if (
+                        current is None
+                        or candidate["score"] > current["score"]
+                        or (
+                            candidate["score"] == current["score"]
+                            and candidate["weight"] > current["weight"]
+                        )
+                    ):
+                        ranked_entities[key] = candidate
+
+            ranked_category_items = [
+                value["item"]
+                for value in sorted(
+                    ranked_entities.values(),
+                    key=lambda value: (
+                        -value["score"],
+                        -value["weight"],
+                        value["item"]["label"].lower(),
+                        value["item"]["id"],
+                    ),
+                )[:8]
+            ]
+
+            ranked_search_terms = []
+            seen_search_queries = set()
+            for alias in sorted(
+                search_term_aliases,
+                key=lambda alias: (
+                    -(_search_alias_score(query, [alias.normalized_query]) or 0),
+                    -alias.weight,
+                    alias.query.lower(),
+                    alias.id,
+                ),
+            ):
+                normalized_alias_query = normalize_search_query(alias.query)
+                if normalized_alias_query in seen_search_queries:
+                    continue
+                seen_search_queries.add(normalized_alias_query)
+                ranked_search_terms.append(_search_term_item(alias))
+                if len(ranked_search_terms) == 8:
+                    break
+
+            return Response(
+                {
+                    "query": query,
+                    "categories": ranked_category_items,
+                    "search_terms": ranked_search_terms,
+                }
+            )
+        except Exception as exc:
+            print("SearchSuggestView error:", exc)
+            return _search_suggest_empty_response(query)
+
+
+class SearchResultsView(APIView):
+    permission_classes = [permissions.AllowAny]
+
+    def get(self, request):
+        query = normalize_search_query(request.query_params.get("q"))
+        try:
+            page = int(request.query_params.get("page", 1))
+        except (TypeError, ValueError):
+            page = 1
+        page = max(page, 1)
+
+        if not query:
+            return Response(
+                {
+                    "query": query,
+                    "count": 0,
+                    "page": page,
+                    "page_size": SEARCH_PAGE_SIZE,
+                    "has_more": False,
+                    "results": [],
+                }
+            )
+
+        products = filter_publicly_available_products(_catalog_product_queryset()).filter(
+            stock__gt=0,
+        )
+        products = products.filter(
+            Q(title__icontains=query)
+            | Q(category__name__icontains=query)
+            | Q(platform__name__icontains=query)
+            | Q(platform__display_name_vi__icontains=query)
+            | Q(offer_type__name__icontains=query)
+            | Q(offer_type__display_name_vi__icontains=query)
+        ).annotate(
+            relevance=Case(
+                When(title__iexact=query, then=Value(600)),
+                When(title__istartswith=query, then=Value(500)),
+                When(title__icontains=query, then=Value(400)),
+                When(category__name__iexact=query, then=Value(300)),
+                When(platform__name__iexact=query, then=Value(300)),
+                When(platform__display_name_vi__iexact=query, then=Value(300)),
+                When(offer_type__name__iexact=query, then=Value(300)),
+                When(offer_type__display_name_vi__iexact=query, then=Value(300)),
+                When(category__name__istartswith=query, then=Value(250)),
+                When(platform__name__istartswith=query, then=Value(250)),
+                When(platform__display_name_vi__istartswith=query, then=Value(250)),
+                When(offer_type__name__istartswith=query, then=Value(250)),
+                When(offer_type__display_name_vi__istartswith=query, then=Value(250)),
+                default=Value(100),
+                output_field=IntegerField(),
+            )
+        ).order_by("-relevance", "title", "id")
+
+        count = products.count()
+        start = (page - 1) * SEARCH_PAGE_SIZE
+        end = start + SEARCH_PAGE_SIZE
+        results = list(products[start:end])
+        has_more = end < count
+
+        return Response(
+            {
+                "query": query,
+                "count": count,
+                "page": page,
+                "page_size": SEARCH_PAGE_SIZE,
+                "has_more": has_more,
+                "results": ProductSerializer(
+                    results,
+                    many=True,
+                    context={"request": request},
+                ).data,
+            }
         )
 
 

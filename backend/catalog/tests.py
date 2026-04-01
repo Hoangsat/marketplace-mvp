@@ -1,11 +1,19 @@
 from decimal import Decimal
+from unittest.mock import patch
 
 from django.test import TestCase, override_settings
 from rest_framework import status
 from rest_framework.test import APIClient
 
 from accounts.models import User, UserProfile
-from catalog.models import Category, OfferType, Platform, Product
+from catalog.models import (
+    Category,
+    OfferType,
+    Platform,
+    Product,
+    SearchAlias,
+    normalize_search_query,
+)
 from catalog.serializers import ProductSerializer
 from orders.services import create_checkout_order
 
@@ -408,7 +416,11 @@ class PlatformCatalogApiTests(TestCase):
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(platform_response.status_code, status.HTTP_200_OK)
         self.assertEqual(response.json()[0]["slug"], "games")
-        self.assertEqual(platform_response.json()[0]["slug"], "steam")
+        platform_slugs = [item["slug"] for item in platform_response.json()]
+        self.assertIn("steam", platform_slugs)
+        self.assertIn("free-fire", platform_slugs)
+        self.assertIn("pubg-mobile", platform_slugs)
+        self.assertIn("genshin-impact", platform_slugs)
 
     def test_platform_detail_exposes_offer_type_usage(self):
         response = self.client.get("/platforms/steam")
@@ -416,6 +428,26 @@ class PlatformCatalogApiTests(TestCase):
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertTrue(response.json()["has_offer_types"])
         self.assertEqual(response.json()["offer_types"][0]["slug"], "accounts")
+
+    def test_new_games_expose_same_offer_type_hierarchy_as_existing_games(self):
+        expected_offer_type_slugs = [
+            "accounts",
+            "boosting",
+            "coaching",
+            "currency",
+            "items",
+            "skins",
+        ]
+
+        for platform_slug in ("free-fire", "pubg-mobile", "genshin-impact"):
+            response = self.client.get(f"/platforms/{platform_slug}")
+
+            self.assertEqual(response.status_code, status.HTTP_200_OK)
+            self.assertTrue(response.json()["has_offer_types"])
+            self.assertEqual(
+                [item["slug"] for item in response.json()["offer_types"]],
+                expected_offer_type_slugs,
+            )
 
     def test_create_product_without_offer_type_is_rejected_when_platform_uses_offer_types(self):
         self.client.force_authenticate(user=self.seller)
@@ -686,3 +718,250 @@ class PlatformCatalogApiTests(TestCase):
 
         self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
         self.assertEqual(response.json()["detail"], "Offer type not found")
+
+
+class SearchApiTests(TestCase):
+    def setUp(self):
+        self.client = APIClient()
+        self.seller = User.objects.create_user(
+            email="search-seller@example.com",
+            password="password123",
+        )
+        self.category = Category.objects.create(
+            name="Zen Tools",
+            slug="zen-tools",
+        )
+        self.platform = Platform.objects.create(
+            name="Zen Chat",
+            slug="zen-chat",
+            display_name_vi="Zen Chat",
+            category=self.category,
+        )
+        self.offer_type = OfferType.objects.create(
+            platform=self.platform,
+            name="Zen Plus",
+            slug="zen-plus",
+            display_name_vi="Zen Plus",
+        )
+        self.title_match_product = Product.objects.create(
+            title="Zen bundle access",
+            description="Direct title match",
+            price=Decimal("15.00"),
+            stock=3,
+            seller=self.seller,
+            category=self.category,
+            platform=self.platform,
+            offer_type=self.offer_type,
+        )
+        self.category_match_product = Product.objects.create(
+            title="Utility membership",
+            description="Matches through category only",
+            price=Decimal("14.00"),
+            stock=2,
+            seller=self.seller,
+            category=self.category,
+        )
+        self.out_of_stock_product = Product.objects.create(
+            title="Zen sold out",
+            description="Out of stock",
+            price=Decimal("16.00"),
+            stock=0,
+            seller=self.seller,
+            category=self.category,
+        )
+        self.inactive_product = Product.objects.create(
+            title="Zen inactive",
+            description="Inactive product",
+            price=Decimal("17.00"),
+            stock=2,
+            is_active=False,
+            seller=self.seller,
+            category=self.category,
+        )
+        self.hidden_platform = Platform.objects.create(
+            name="Zen Hidden",
+            slug="zen-hidden",
+            category=self.category,
+            is_active=False,
+        )
+        self.hidden_platform_product = Product.objects.create(
+            title="Zen hidden product",
+            description="Hidden by inactive platform",
+            price=Decimal("18.00"),
+            stock=2,
+            seller=self.seller,
+            category=self.category,
+            platform=self.hidden_platform,
+        )
+        self.direct_entity_alias = SearchAlias.objects.create(
+            query="zen chat official",
+            entity_type=SearchAlias.EntityType.GAME,
+            entity_id=self.platform.id,
+            weight=25,
+        )
+        self.search_term_alias = SearchAlias.objects.create(
+            query="zen chat premium",
+            entity_type=SearchAlias.EntityType.SEARCH_TERM,
+            weight=40,
+        )
+        self.inactive_alias = SearchAlias.objects.create(
+            query="zen hidden secret",
+            entity_type=SearchAlias.EntityType.SEARCH_TERM,
+            weight=99,
+            is_active=False,
+        )
+        self.games_category = Category.objects.get(slug="games")
+        self.dota_platform = Platform.objects.get(slug="dota-2")
+
+    def test_normalize_search_query_trims_lowercases_and_collapses_spaces(self):
+        self.assertEqual(normalize_search_query("  Zen   CHAT  Plus "), "zen chat plus")
+        self.assertEqual(normalize_search_query(""), "")
+
+    def test_search_suggest_returns_empty_groups_for_short_queries(self):
+        response = self.client.get("/api/search/suggest", {"q": "z"})
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(
+            response.json(),
+            {"query": "z", "categories": [], "search_terms": []},
+        )
+
+    def test_search_suggest_returns_direct_matches_and_search_terms(self):
+        response = self.client.get("/api/search/suggest", {"q": "zen"})
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        payload = response.json()
+        category_types = {item["type"] for item in payload["categories"]}
+        self.assertIn("category", category_types)
+        self.assertIn("game", category_types)
+        self.assertIn("offer_type", category_types)
+        self.assertTrue(
+            any(item["query"] == "zen chat premium" for item in payload["search_terms"])
+        )
+
+    def test_search_suggest_returns_games_category_for_game_query(self):
+        response = self.client.get("/api/search/suggest", {"q": "game"})
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertTrue(
+            any(
+                item["type"] == "category"
+                and item["id"] == self.games_category.id
+                and item["slug"] == "games"
+                and item["url"] == "/categories/games"
+                for item in response.json()["categories"]
+            )
+        )
+
+    def test_search_suggest_returns_dota_platform_for_dota_query(self):
+        response = self.client.get("/api/search/suggest", {"q": "dota"})
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertTrue(
+            any(
+                item["type"] == "game"
+                and item["id"] == self.dota_platform.id
+                and item["slug"] == "dota-2"
+                and item["url"] == "/catalog/dota-2"
+                for item in response.json()["categories"]
+            )
+        )
+
+    def test_search_suggest_returns_dota_platform_for_dota_two_query(self):
+        response = self.client.get("/api/search/suggest", {"q": "dota 2"})
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertTrue(
+            any(
+                item["type"] == "game"
+                and item["id"] == self.dota_platform.id
+                and item["slug"] == "dota-2"
+                and item["url"] == "/catalog/dota-2"
+                for item in response.json()["categories"]
+            )
+        )
+
+    def test_search_suggest_keeps_direct_matches_when_alias_lookup_fails(self):
+        with patch.object(SearchAlias.objects, "filter", side_effect=RuntimeError("alias boom")):
+            response = self.client.get("/api/search/suggest", {"q": "dota"})
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertTrue(
+            any(
+                item["type"] == "game"
+                and item["id"] == self.dota_platform.id
+                and item["slug"] == "dota-2"
+                for item in response.json()["categories"]
+            )
+        )
+
+    def test_search_suggest_deduplicates_alias_backed_entities(self):
+        response = self.client.get("/api/search/suggest", {"q": "zen chat"})
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        platform_matches = [
+            item
+            for item in response.json()["categories"]
+            if item["type"] == "game" and item["id"] == self.platform.id
+        ]
+        self.assertEqual(len(platform_matches), 1)
+
+    def test_search_suggest_excludes_inactive_aliases_and_entities(self):
+        response = self.client.get("/api/search/suggest", {"q": "hidden"})
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        payload = response.json()
+        self.assertEqual(payload["categories"], [])
+        self.assertEqual(payload["search_terms"], [])
+
+    def test_search_suggest_returns_safe_empty_response_on_unexpected_error(self):
+        with patch("catalog.views._category_queryset", side_effect=RuntimeError("boom")):
+            response = self.client.get("/api/search/suggest", {"q": "zen"})
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(
+            response.json(),
+            {"query": "zen", "categories": [], "search_terms": []},
+        )
+
+    def test_full_search_returns_only_public_active_buyable_products(self):
+        response = self.client.get("/api/search", {"q": "zen"})
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        result_ids = [item["id"] for item in response.json()["results"]]
+        self.assertIn(self.title_match_product.id, result_ids)
+        self.assertIn(self.category_match_product.id, result_ids)
+        self.assertNotIn(self.out_of_stock_product.id, result_ids)
+        self.assertNotIn(self.inactive_product.id, result_ids)
+        self.assertNotIn(self.hidden_platform_product.id, result_ids)
+
+    def test_full_search_ranks_title_matches_ahead_of_related_name_matches(self):
+        response = self.client.get("/api/search", {"q": "zen"})
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.json()["results"][0]["id"], self.title_match_product.id)
+
+    def test_full_search_paginates_results(self):
+        for index in range(25):
+            Product.objects.create(
+                title=f"Searchpage item {index}",
+                description="Pagination product",
+                price=Decimal("10.00"),
+                stock=1,
+                seller=self.seller,
+                category=self.category,
+            )
+
+        first_page = self.client.get("/api/search", {"q": "searchpage", "page": 1})
+        second_page = self.client.get("/api/search", {"q": "searchpage", "page": 2})
+
+        self.assertEqual(first_page.status_code, status.HTTP_200_OK)
+        self.assertEqual(second_page.status_code, status.HTTP_200_OK)
+        self.assertEqual(first_page.json()["count"], 25)
+        self.assertEqual(first_page.json()["page"], 1)
+        self.assertEqual(first_page.json()["page_size"], 24)
+        self.assertTrue(first_page.json()["has_more"])
+        self.assertEqual(len(first_page.json()["results"]), 24)
+        self.assertEqual(second_page.json()["page"], 2)
+        self.assertFalse(second_page.json()["has_more"])
+        self.assertEqual(len(second_page.json()["results"]), 1)

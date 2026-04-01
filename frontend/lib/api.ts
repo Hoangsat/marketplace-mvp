@@ -22,11 +22,13 @@ function shouldAttachAuth(path: string, method?: string): boolean {
       normalizedPath === "/games" ||
       normalizedPath === "/platforms" ||
       /^\/platforms\/[^/]+$/.test(normalizedPath) ||
-      normalizedPath === "/offer-types" ||
-      normalizedPath === "/products" ||
-      /^\/products\/\d+$/.test(normalizedPath) ||
-      /^\/api\/catalog\/.+$/.test(normalizedPath) ||
-      /^\/api\/sellers\/[^/]+$/.test(normalizedPath)
+        normalizedPath === "/offer-types" ||
+        normalizedPath === "/products" ||
+        /^\/products\/\d+$/.test(normalizedPath) ||
+        normalizedPath === "/api/search" ||
+        normalizedPath === "/api/search/suggest" ||
+        /^\/api\/catalog\/.+$/.test(normalizedPath) ||
+        /^\/api\/sellers\/[^/]+$/.test(normalizedPath)
     ) {
       return false;
     }

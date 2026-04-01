@@ -14,6 +14,8 @@ from .views import (
     ProductCollectionView,
     ProductDetailView,
     ProductImagesReplaceView,
+    SearchResultsView,
+    SearchSuggestView,
     SellerProductListView,
 )
 
@@ -28,6 +30,8 @@ urlpatterns = [
     path("products/<int:product_id>", ProductDetailView.as_view(), name="products-detail"),
     path("products/<int:product_id>/images", ProductImagesReplaceView.as_view(), name="products-images"),
     path("seller/products", SellerProductListView.as_view(), name="seller-products"),
+    path("api/search", SearchResultsView.as_view(), name="search-results"),
+    path("api/search/suggest", SearchSuggestView.as_view(), name="search-suggest"),
     path("api/catalog/categories/top", CategoryTopListView.as_view(), name="catalog-categories-top"),
     path(
         "api/catalog/categories/featured",

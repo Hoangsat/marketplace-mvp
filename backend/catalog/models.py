@@ -4,6 +4,12 @@ from django.db.models import Q
 from django.utils.text import slugify
 
 
+def normalize_search_query(value: str | None) -> str:
+    if not value:
+        return ""
+    return " ".join(value.strip().lower().split())
+
+
 class Category(models.Model):
     id = models.AutoField(primary_key=True)
     name = models.CharField(max_length=255, unique=True)
@@ -133,6 +139,36 @@ class Product(models.Model):
 
     def __str__(self) -> str:
         return self.title
+
+
+class SearchAlias(models.Model):
+    class EntityType(models.TextChoices):
+        CATEGORY = "category", "Category"
+        GAME = "game", "Game"
+        OFFER_TYPE = "offer_type", "Offer Type"
+        SEARCH_TERM = "search_term", "Search Term"
+
+    query = models.CharField(max_length=255)
+    normalized_query = models.CharField(max_length=255, db_index=True)
+    entity_type = models.CharField(max_length=20, choices=EntityType.choices)
+    entity_id = models.IntegerField(null=True, blank=True)
+    weight = models.IntegerField(default=0)
+    is_active = models.BooleanField(default=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        db_table = "search_aliases"
+        ordering = ("-weight", "query", "id")
+        indexes = [
+            models.Index(fields=("entity_type", "is_active", "-weight")),
+        ]
+
+    def __str__(self) -> str:
+        return self.query
+
+    def save(self, *args, **kwargs):
+        self.normalized_query = normalize_search_query(self.query)
+        super().save(*args, **kwargs)
 
 
 def filter_publicly_available_products(queryset):

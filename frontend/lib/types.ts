@@ -30,6 +30,28 @@ export interface OfferType {
   platform_id: number;
 }
 
+export interface SearchSuggestCategoryItem {
+  type: "category" | "game" | "offer_type";
+  id: number;
+  label: string;
+  subtitle: string | null;
+  slug: string;
+  image: string | null;
+  url: string;
+}
+
+export interface SearchSuggestTermItem {
+  label: string;
+  query: string;
+  url: string;
+}
+
+export interface SearchSuggestResponse {
+  query: string;
+  categories: SearchSuggestCategoryItem[];
+  search_terms: SearchSuggestTermItem[];
+}
+
 export interface Product {
   id: number;
   title: string;
@@ -45,6 +67,15 @@ export interface Product {
   category: Category;
   platform: Platform | null;
   offer_type: OfferType | null;
+}
+
+export interface SearchResultsResponse {
+  query: string;
+  count: number;
+  page: number;
+  page_size: number;
+  has_more: boolean;
+  results: Product[];
 }
 
 export interface PublicSellerProfile {

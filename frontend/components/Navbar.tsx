@@ -2,8 +2,9 @@
 
 // components/Navbar.tsx
 import Link from "next/link";
-import { useEffect, useState } from "react";
+import { Suspense, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
+import HeaderSearch from "@/components/HeaderSearch";
 import { getToken, removeToken } from "@/lib/auth";
 import { getCart } from "@/lib/cart";
 import { useLanguage } from "@/components/LanguageProvider";
@@ -47,8 +48,8 @@ export default function Navbar() {
 
   return (
     <nav className="sticky top-0 z-50 bg-white border-b border-gray-200 shadow-sm">
-      <div className="max-w-6xl mx-auto px-4 h-14 flex items-center justify-between gap-4">
-        <div className="flex items-center gap-4 shrink-0">
+      <div className="max-w-6xl mx-auto px-4 py-3 flex flex-wrap items-center gap-3">
+        <div className="flex min-w-0 flex-1 items-center gap-4 shrink-0">
           <Link href="/" className="text-lg font-bold text-orange-600 shrink-0">
             MarketPy
           </Link>
@@ -60,7 +61,20 @@ export default function Navbar() {
           </div>
         </div>
 
-        <div className="flex items-center gap-3 text-sm">
+        <div className="order-last w-full lg:order-none lg:flex-1 lg:max-w-xl">
+          <Suspense
+            fallback={
+              <div
+                aria-hidden="true"
+                className="h-11 rounded-2xl border border-gray-200 bg-gray-50"
+              />
+            }
+          >
+            <HeaderSearch />
+          </Suspense>
+        </div>
+
+        <div className="flex items-center gap-3 text-sm shrink-0">
           {!mounted ? (
             <div
               aria-hidden="true"
