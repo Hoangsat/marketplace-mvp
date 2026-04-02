@@ -160,7 +160,11 @@ def confirm_order_payment(*, order_id, current_user=None):
         for item in order.items.all():
             product = locked_products[item.product_id]
             product.stock -= item.quantity
-            product.save(update_fields=["stock"])
+            if product.stock == 0:
+                product.is_active = False
+                product.save(update_fields=["stock", "is_active"])
+            else:
+                product.save(update_fields=["stock"])
 
         seller_amounts = _get_seller_amounts(order)
         for seller_id, seller_data in seller_amounts.items():

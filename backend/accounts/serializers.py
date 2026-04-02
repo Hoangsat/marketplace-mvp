@@ -7,9 +7,15 @@ from rest_framework import serializers
 from catalog.serializers import ProductSerializer
 
 from .models import PayoutRequest, User, UserProfile
+from .utils import normalize_email_address
 
 
 NICKNAME_PATTERN = re.compile(r"^[A-Za-z0-9_.-]+$")
+
+
+class NormalizedEmailField(serializers.EmailField):
+    def to_internal_value(self, data):
+        return super().to_internal_value(normalize_email_address(data))
 
 
 class UserSerializer(serializers.ModelSerializer):
@@ -19,7 +25,7 @@ class UserSerializer(serializers.ModelSerializer):
 
 
 class RegisterSerializer(serializers.Serializer):
-    email = serializers.EmailField()
+    email = NormalizedEmailField()
     password = serializers.CharField(write_only=True)
     nickname = serializers.CharField(
         write_only=True,
@@ -37,7 +43,7 @@ class RegisterSerializer(serializers.Serializer):
     is_seller = serializers.BooleanField(required=False, default=True)
 
     def validate_email(self, value):
-        if User.objects.filter(email=value).exists():
+        if User.objects.filter(email__iexact=value).exists():
             raise serializers.ValidationError("Email already registered")
         return value
 
@@ -63,7 +69,7 @@ class RegisterSerializer(serializers.Serializer):
 
 
 class LoginSerializer(serializers.Serializer):
-    username = serializers.EmailField()
+    username = NormalizedEmailField()
     password = serializers.CharField(write_only=True)
 
 

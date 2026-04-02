@@ -12,6 +12,20 @@ class LoginViewTests(TestCase):
     def setUp(self):
         self.client = APIClient()
 
+    def test_login_normalizes_email_case_and_whitespace(self):
+        User.objects.create_user(
+            email="test@example.com",
+            password="password123",
+        )
+
+        response = self.client.post(
+            "/auth/login",
+            {"username": "  TeSt@example.com  ", "password": "password123"},
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertIn("access_token", response.json())
+
     def test_inactive_user_cannot_log_in(self):
         User.objects.create_user(
             email="disabled@example.com",
@@ -83,6 +97,41 @@ class RegisterViewTests(TestCase):
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
         self.assertEqual(response.json()["detail"], "Nickname is already taken")
         self.assertFalse(User.objects.filter(email="duplicate@example.com").exists())
+
+    def test_register_rejects_duplicate_email_when_case_differs(self):
+        User.objects.create_user(
+            email="test@example.com",
+            password=self.strong_password,
+        )
+
+        response = self.client.post(
+            "/auth/register",
+            {
+                "email": "TEST@example.com",
+                "password": self.strong_password,
+                "nickname": "AnotherSeller",
+            },
+            format="json",
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertEqual(response.json()["detail"], "Email already registered")
+
+    def test_register_normalizes_email_whitespace_and_case(self):
+        response = self.client.post(
+            "/auth/register",
+            {
+                "email": "  TEST@example.com  ",
+                "password": self.strong_password,
+                "nickname": "TrimmedEmailSeller",
+            },
+            format="json",
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+        user = User.objects.get(email="test@example.com")
+        self.assertEqual(user.email, "test@example.com")
+        self.assertEqual(response.json()["email"], "test@example.com")
 
     def test_register_trims_nickname_before_saving_profile(self):
         response = self.client.post(

@@ -11,7 +11,12 @@ from catalog.models import Category, OfferType, Platform, Product
 from orders.admin import OrderAdmin
 from orders.models import Order, OrderItem, SellerTransaction
 from orders.serializers import OrderSerializer
-from orders.services import create_checkout_order, mark_order_delivered
+from orders.services import (
+    OrderFlowError,
+    confirm_order_payment,
+    create_checkout_order,
+    mark_order_delivered,
+)
 
 
 class CheckoutFlowTests(TestCase):
@@ -238,6 +243,108 @@ class OrderHistorySnapshotTests(TestCase):
                 "note": "Use the order reference as the memo.",
             },
         )
+
+
+class OrderPaymentStockUpdateTests(TestCase):
+    def setUp(self):
+        self.client = APIClient()
+        self.buyer = User.objects.create_user(
+            email="buyer@example.com",
+            password="password123",
+            is_seller=False,
+        )
+        self.seller = User.objects.create_user(
+            email="seller@example.com",
+            password="password123",
+        )
+        self.category, _ = Category.objects.get_or_create(name="Games")
+        self.product = Product.objects.create(
+            title="Stock Sensitive Product",
+            description="Checks stock changes on payment confirmation",
+            price=Decimal("30.00"),
+            stock=5,
+            seller=self.seller,
+            category=self.category,
+        )
+
+    def _create_order(self, quantity):
+        return create_checkout_order(
+            buyer=self.buyer,
+            items=[{"product_id": self.product.id, "quantity": quantity}],
+        )
+
+    def test_confirm_order_payment_reduces_product_stock(self):
+        order = self._create_order(quantity=2)
+
+        confirm_order_payment(order_id=order.id)
+
+        self.product.refresh_from_db()
+        order.refresh_from_db()
+        self.assertEqual(self.product.stock, 3)
+        self.assertTrue(self.product.is_active)
+        self.assertEqual(order.status, Order.Status.PAID)
+
+    def test_confirm_order_payment_marks_product_inactive_when_stock_reaches_zero(self):
+        self.product.stock = 1
+        self.product.save(update_fields=["stock"])
+        order = self._create_order(quantity=1)
+
+        confirm_order_payment(order_id=order.id)
+
+        self.product.refresh_from_db()
+        self.assertEqual(self.product.stock, 0)
+        self.assertFalse(self.product.is_active)
+
+        response = self.client.get(f"/products/{self.product.id}")
+        self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
+
+    def test_confirm_order_payment_fails_safely_when_stock_is_no_longer_available(self):
+        order = self._create_order(quantity=2)
+        self.product.stock = 1
+        self.product.save(update_fields=["stock"])
+
+        with self.assertRaisesMessage(
+            OrderFlowError,
+            "Insufficient stock for 'Stock Sensitive Product' to fulfill this order now.",
+        ):
+            confirm_order_payment(order_id=order.id)
+
+        self.product.refresh_from_db()
+        order.refresh_from_db()
+        self.assertEqual(self.product.stock, 1)
+        self.assertEqual(order.status, Order.Status.PENDING)
+
+    def test_out_of_stock_product_cannot_be_purchased(self):
+        self.product.stock = 0
+        self.product.save(update_fields=["stock"])
+
+        with self.assertRaisesMessage(
+            OrderFlowError,
+            "'Stock Sensitive Product' is out of stock",
+        ):
+            self._create_order(quantity=1)
+
+    def test_second_payment_confirmation_fails_after_stock_is_consumed(self):
+        self.product.stock = 1
+        self.product.save(update_fields=["stock"])
+        first_order = self._create_order(quantity=1)
+        second_order = self._create_order(quantity=1)
+
+        confirm_order_payment(order_id=first_order.id)
+
+        with self.assertRaisesMessage(
+            OrderFlowError,
+            "Insufficient stock for 'Stock Sensitive Product' to fulfill this order now.",
+        ):
+            confirm_order_payment(order_id=second_order.id)
+
+        self.product.refresh_from_db()
+        first_order.refresh_from_db()
+        second_order.refresh_from_db()
+        self.assertEqual(self.product.stock, 0)
+        self.assertFalse(self.product.is_active)
+        self.assertEqual(first_order.status, Order.Status.PAID)
+        self.assertEqual(second_order.status, Order.Status.PENDING)
 
 
 class DeliveredOrderSellerTransactionTests(TestCase):

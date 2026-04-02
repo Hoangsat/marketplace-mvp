@@ -1,9 +1,11 @@
 from django.conf import settings
 from django.contrib.auth.models import AbstractBaseUser, PermissionsMixin
 from django.db import models
+from django.db.models.functions import Lower
 from django.utils import timezone
 
 from .managers import UserManager
+from .utils import normalize_email_address
 
 
 class User(AbstractBaseUser, PermissionsMixin):
@@ -23,9 +25,26 @@ class User(AbstractBaseUser, PermissionsMixin):
 
     class Meta:
         db_table = "users"
+        constraints = [
+            models.UniqueConstraint(
+                Lower("email"),
+                name="accounts_user_email_ci_unique",
+            )
+        ]
 
     def __str__(self) -> str:
         return self.email
+
+    def save(self, *args, **kwargs):
+        normalized_email = normalize_email_address(self.email)
+        if self.email != normalized_email:
+            self.email = normalized_email
+            update_fields = kwargs.get("update_fields")
+            if update_fields is not None:
+                updated_fields = set(update_fields)
+                updated_fields.add("email")
+                kwargs["update_fields"] = updated_fields
+        super().save(*args, **kwargs)
 
 
 class PayoutRequest(models.Model):
