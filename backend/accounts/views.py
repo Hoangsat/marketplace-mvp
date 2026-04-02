@@ -1,4 +1,4 @@
-from django.db import transaction
+from django.db import IntegrityError, transaction
 from rest_framework import permissions, status
 from rest_framework.parsers import FormParser, JSONParser, MultiPartParser
 from rest_framework.response import Response
@@ -30,16 +30,32 @@ class RegisterView(APIView):
             detail = next(iter(serializer.errors.values()))[0]
             return Response({"detail": str(detail)}, status=status.HTTP_400_BAD_REQUEST)
 
-        with transaction.atomic():
-            user = User.objects.create_user(
-                email=serializer.validated_data["email"],
-                password=serializer.validated_data["password"],
-                is_seller=serializer.validated_data.get("is_seller", True),
-            )
-            UserProfile.objects.create(
-                user=user,
-                nickname=serializer.validated_data["nickname"],
-            )
+        email = serializer.validated_data["email"]
+        nickname = serializer.validated_data["nickname"]
+
+        try:
+            with transaction.atomic():
+                user = User.objects.create_user(
+                    email=email,
+                    password=serializer.validated_data["password"],
+                    is_seller=serializer.validated_data.get("is_seller", True),
+                )
+                UserProfile.objects.create(
+                    user=user,
+                    nickname=nickname,
+                )
+        except IntegrityError:
+            if User.objects.filter(email__iexact=email).exists():
+                return Response(
+                    {"detail": "Email already registered"},
+                    status=status.HTTP_400_BAD_REQUEST,
+                )
+            if UserProfile.objects.filter(nickname=nickname).exists():
+                return Response(
+                    {"detail": "Nickname is already taken"},
+                    status=status.HTTP_400_BAD_REQUEST,
+                )
+            raise
         return Response(UserSerializer(user).data, status=status.HTTP_201_CREATED)
 
 

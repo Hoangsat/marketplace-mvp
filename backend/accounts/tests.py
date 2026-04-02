@@ -1,6 +1,9 @@
 from decimal import Decimal
 
+from django.db import connection
+from django.db.migrations.executor import MigrationExecutor
 from django.test import TestCase
+from django.test import TransactionTestCase
 from rest_framework import status
 from rest_framework.test import APIClient
 
@@ -178,6 +181,59 @@ class RegisterViewTests(TestCase):
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
         self.assertIn("too short", response.json()["detail"].lower())
         self.assertFalse(User.objects.filter(email="weak@example.com").exists())
+
+
+class UserEmailCleanupMigrationTests(TransactionTestCase):
+    migrate_from = ("accounts", "0005_userprofile")
+    migrate_to = ("accounts", "0007_user_email_ci_unique_constraint")
+
+    def setUp(self):
+        super().setUp()
+        self.executor = MigrationExecutor(connection)
+        self.executor.migrate([self.migrate_from])
+        old_apps = self.executor.loader.project_state([self.migrate_from]).apps
+        self.setUpBeforeMigration(old_apps)
+        self.executor = MigrationExecutor(connection)
+        self.executor.migrate([self.migrate_to])
+        self.apps = self.executor.loader.project_state([self.migrate_to]).apps
+
+    def setUpBeforeMigration(self, apps):
+        User = apps.get_model("accounts", "User")
+        self.kept_user = User.objects.create(
+            email="  Test@Example.com  ",
+            password="password123",
+        )
+        self.duplicate_user = User.objects.create(
+            email="test@example.com",
+            password="password123",
+        )
+        self.third_duplicate_user = User.objects.create(
+            email="TEST@example.com",
+            password="password123",
+        )
+        self.unique_user = User.objects.create(
+            email="Other@example.com ",
+            password="password123",
+        )
+
+    def test_migration_keeps_lowest_id_and_normalizes_email(self):
+        User = self.apps.get_model("accounts", "User")
+
+        users = list(User.objects.order_by("id").values("id", "email"))
+
+        self.assertEqual(len(users), 2)
+        self.assertEqual(users[0]["id"], self.kept_user.id)
+        self.assertEqual(users[0]["email"], "test@example.com")
+        self.assertEqual(users[1]["id"], self.unique_user.id)
+        self.assertEqual(users[1]["email"], "other@example.com")
+
+    def test_migration_leaves_no_duplicate_normalized_emails(self):
+        User = self.apps.get_model("accounts", "User")
+
+        emails = list(User.objects.order_by("id").values_list("email", flat=True))
+
+        self.assertEqual(emails, ["test@example.com", "other@example.com"])
+        self.assertEqual(len(emails), len(set(emails)))
 
 
 class PublicSellerProfileViewTests(TestCase):
